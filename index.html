@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>LINE 抽獎</title>
   <style>
     html, body {
@@ -18,71 +18,75 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       height: 100%;
       width: 100%;
+      padding: 20px;
       box-sizing: border-box;
-      text-align: center;
     }
     h1 {
       font-size: 2rem;
+      margin: 30px 0 20px 0;
+      text-align: center;
       color: gold;
-      margin-bottom: 10px;
-    }
-    #drawVideo {
-      width: 100%;
-      max-width: 500px;
-      border-radius: 12px;
-    }
-    #result {
-      font-size: 2rem;
-      color: yellow;
-      margin-top: 20px;
-      display: none;
-    }
-    #form {
-      display: none;
-      margin-top: 20px;
-      width: 90%;
-      max-width: 400px;
-    }
-    input {
-      width: 100%;
-      padding: 15px;
-      font-size: 1.2rem;
-      margin-top: 15px;
-      border-radius: 6px;
-      border: none;
     }
     button {
       width: 100%;
-      padding: 15px;
-      font-size: 1.5rem;
-      margin-top: 20px;
+      padding: 50px;
+      margin-top: 30px;
+      font-size: 2.2rem;
       background: #28a745;
       color: #fff;
       border: none;
-      border-radius: 6px;
+      border-radius: 10px;
     }
     button:disabled {
       background-color: #555 !important;
       color: #ccc !important;
       cursor: not-allowed;
     }
+    #form {
+      display: none;
+      width: 100%;
+      margin-top: 30px;
+    }
+    input {
+      width: 92%;
+      padding: 30px;
+      font-size: 3rem;
+      margin-top: 50px;
+      border-radius: 8px;
+      border: none;
+    }
+    #drawVideo {
+      display: none;
+      width: 100%;
+      margin-top: 30px;
+      border-radius: 12px;
+    }
+    #result {
+      font-size: 2rem;
+      margin-top: 30px;
+      color: yellow;
+      display: none;
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <h1>🎉 LINE 抽獎 🎉</h1>
-    <video id="drawVideo" playsinline controls autoplay>
+    <button id="drawBtn" disabled>載入中...</button>
+
+    <video id="drawVideo" playsinline muted>
       <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
-      您的瀏覽器不支援影片。
     </video>
+
     <div id="result"></div>
+
     <div id="form">
-      <h3>請填寫以下資料以完成中獎登錄</h3>
-      <input type="text" id="winnerName" placeholder="輸入您的姓名">
-      <input type="tel" id="winnerPhone" placeholder="輸入您的電話">
+      <h3>恭喜中獎！請填寫以下資料</h3>
+      <input type="text" id="winnerName" placeholder="輸入您的姓名" />
+      <input type="tel" id="winnerPhone" placeholder="輸入您的電話" />
       <button id="submitBtn">送出中獎資料</button>
     </div>
   </div>
@@ -92,9 +96,9 @@
     const liffId = "1656871455-vE1ZZLJ7";
     let userId = "";
     let displayName = "";
-    const video = document.getElementById("drawVideo");
+    const drawBtn = document.getElementById("drawBtn");
+    const drawVideo = document.getElementById("drawVideo");
     const result = document.getElementById("result");
-    const form = document.getElementById("form");
 
     async function main() {
       try {
@@ -107,36 +111,51 @@
         userId = profile.userId;
         displayName = profile.displayName;
         console.log("登入完成：", userId, displayName);
-
-        // 影片一進入就播
-        video.play();
-
-        // 10秒後進行判斷
-        setTimeout(() => {
-          video.pause();
-          const win = Math.random() < 0.5; // 50% 中獎率
-          if (win) {
-            result.textContent = "🎊 恭喜中獎！";
-            form.style.display = "block";
-          } else {
-            result.textContent = "😭 銘謝惠顧，明天再來！";
-          }
-          result.style.display = "block";
-        }, 10000);
-
+        drawBtn.disabled = false;
+        drawBtn.textContent = "點我抽獎";
       } catch (err) {
         console.error("LIFF 初始化失敗", err);
-        alert("載入失敗，請重新整理");
+        drawBtn.textContent = "載入失敗，請重試";
       }
     }
 
+    drawBtn.addEventListener("click", () => {
+      drawBtn.disabled = true;
+      drawBtn.style.display = "none";
+      drawVideo.style.display = "block";
+      result.style.display = "none";
+
+      drawVideo.currentTime = 0;
+      drawVideo.play();
+
+      setTimeout(() => {
+        drawVideo.pause();
+        drawVideo.style.display = "none";
+
+        // 中獎機率 50%
+        const win = Math.random() < 0.5;
+
+        if (win) {
+          result.textContent = "🎊 恭喜中獎！";
+          document.getElementById("form").style.display = "block";
+        } else {
+          result.textContent = "😭 銘謝惠顧，再接再厲！";
+          drawBtn.disabled = false;
+          drawBtn.style.display = "block";
+        }
+        result.style.display = "block";
+
+      }, 10000); // 10 秒
+    });
+
     document.getElementById("submitBtn").addEventListener("click", () => {
-      const name = document.getElementById("winnerName").value.trim();
-      const phone = document.getElementById("winnerPhone").value.trim();
+      const name = document.getElementById("winnerName").value;
+      const phone = document.getElementById("winnerPhone").value;
       if (!name || !phone) {
         alert("請輸入完整資料");
         return;
       }
+
       const btn = document.getElementById("submitBtn");
       btn.disabled = true;
       btn.textContent = "送出中...";
