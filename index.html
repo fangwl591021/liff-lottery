@@ -8,6 +8,9 @@
     body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei"; }
     button { padding:20px; margin-top:20px; width:80%; font-size:1.5em; }
     video { width:100%; max-width:400px; margin-top:20px; display:none; }
+    #result { margin-top:20px; font-size:2em; display:none; }
+    #form { display:none; margin-top:20px; }
+    input { font-size:1em; padding:10px; width:80%; margin:5px auto; display:block; }
   </style>
 </head>
 <body>
@@ -16,16 +19,49 @@
   <video id="drawVideo" playsinline>
     <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
   </video>
+  <div id="result"></div>
+  <div id="form">
+    <input id="name" placeholder="請輸入姓名">
+    <input id="phone" placeholder="請輸入電話">
+    <button id="sendBtn">送出資料</button>
+  </div>
   <script>
     const startBtn = document.getElementById("startBtn");
     const video = document.getElementById("drawVideo");
+    const result = document.getElementById("result");
+    const form = document.getElementById("form");
+    const sendBtn = document.getElementById("sendBtn");
+
     startBtn.addEventListener("click", () => {
       startBtn.style.display="none";
       video.style.display="block";
       video.currentTime=0;
-      video.play()
-        .then(() => console.log("影片播放中"))
-        .catch(err => console.error("影片播放失敗", err));
+      video.play().catch(err => console.error("影片播放失敗", err));
+    });
+
+    video.onended = () => {
+      const isWin = Math.random() < 0.5; // 50% 機率
+      video.style.display="none";
+      result.style.display="block";
+      if(isWin){
+        result.textContent="🎉 恭喜中獎！";
+        form.style.display="block";
+      }else{
+        result.textContent="😭 銘謝惠顧，再接再厲！";
+        startBtn.style.display="block";
+      }
+    }
+
+    sendBtn.addEventListener("click", () => {
+      const name = document.getElementById("name").value;
+      const phone = document.getElementById("phone").value;
+      if(!name || !phone){
+        alert("請輸入完整資料");
+        return;
+      }
+      alert(`✅ 已送出：${name} / ${phone}`);
+      // 可在這裡呼叫 Apps Script
+      // window.location.reload(); // 如果想重新開始
     });
   </script>
 </body>
