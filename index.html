@@ -32,6 +32,11 @@
     const form = document.getElementById("form");
     const sendBtn = document.getElementById("sendBtn");
 
+    // 你的 Apps Script WebApp 部署網址
+    const appsScriptUrl = "https://script.google.com/macros/s/AKfycbxxxxxx/exec";
+
+    let userId = "testUser123";  // 先假設用戶id (可之後接LIFF)
+
     startBtn.addEventListener("click", () => {
       startBtn.style.display="none";
       video.style.display="block";
@@ -53,15 +58,30 @@
     }
 
     sendBtn.addEventListener("click", () => {
-      const name = document.getElementById("name").value;
-      const phone = document.getElementById("phone").value;
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
       if(!name || !phone){
         alert("請輸入完整資料");
         return;
       }
-      alert(`✅ 已送出：${name} / ${phone}`);
-      // 可在這裡呼叫 Apps Script
-      // window.location.reload(); // 如果想重新開始
+      sendBtn.disabled = true;
+      sendBtn.textContent = "送出中...";
+
+      // 使用 GET 傳參數到 Apps Script
+      const url = `${appsScriptUrl}?userId=${encodeURIComponent(userId)}&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&prize=轉轉小瑪莉&date=${encodeURIComponent(new Date().toISOString())}`;
+      fetch(url)
+        .then(res => res.text())
+        .then(msg => {
+          alert("✅ 已送出，感謝您！");
+          form.style.display="none";
+          result.textContent = "🎉 請期待工作人員聯繫";
+        })
+        .catch(err => {
+          console.error("送出失敗", err);
+          alert("送出失敗，請稍後再試");
+          sendBtn.disabled = false;
+          sendBtn.textContent = "重新送出";
+        });
     });
   </script>
 </body>
