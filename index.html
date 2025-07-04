@@ -1,53 +1,133 @@
-const SHEET_ID = '1IhVlMOpwdk66R7a1sFfyqUzJWcHyZrUNKR09BxdFkFY';
-const PRIZE_SHEET = '中獎紀錄表';
-const DRAW_SHEET = '抽獎紀錄表';
-
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index');
-}
-
-// 記錄中獎
-function recordWinner(data) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(PRIZE_SHEET);
-  sheet.appendRow([
-    data.userId || '',
-    data.displayName || '',
-    data.game || '',
-    data.prize || '',
-    data.name || '',
-    data.phone || '',
-    new Date(), // 中獎時間
-    Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd"), // 抽獎日期
-    '', // 是否核銷
-    '', // 核銷時間
-    '', // 店家名稱
-    ''  // 店家備註
-  ]);
-  return 'OK';
-}
-
-// 記錄抽獎
-function recordDraw(userId, displayName) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DRAW_SHEET);
-  sheet.appendRow([
-    userId,
-    Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
-  ]);
-  return 'OK';
-}
-
-
-// 檢查當日已抽次數
-function checkDrawQuota(userId) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DRAW_SHEET);
-  const today = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
-  const data = sheet.getDataRange().getValues();
-  
-  let count = 0;
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === userId && data[i][2].startsWith(today)) {
-      count++;
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>LINE 抽獎</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
+      font-family: "Microsoft JhengHei", sans-serif;
+      height: 100vh;
+      overflow: hidden;
     }
-  }
-  return count;
-}
+    .app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100%;
+      width: 100%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h1 {
+      font-size: 2rem;
+      margin: 30px 0 20px 0;
+      text-align: center;
+      color: gold;
+    }
+    button {
+      width: 100%;
+      padding: 50px;
+      margin-top: 30px;
+      font-size: 2.2rem;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+    }
+    button:disabled {
+      background-color: #555 !important;
+      color: #ccc !important;
+    }
+    #form {
+      display: none;
+      width: 100%;
+      margin-top: 30px;
+    }
+    input {
+      width: 92%;
+      padding: 30px;
+      font-size: 3rem;
+      margin-top: 50px;
+      border-radius: 8px;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>🎉 LINE 抽獎 🎉</h1>
+    <button id="drawBtn">點我抽獎</button>
+
+    <div id="form">
+      <h3>恭喜中獎！請填寫以下資料</h3>
+      <input type="text" id="winnerName" placeholder="輸入您的姓名" />
+      <input type="tel" id="winnerPhone" placeholder="輸入您的電話" />
+      <button id="submitBtn">送出中獎資料</button>
+    </div>
+  </div>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script>
+    const liffId = "1656871455-vE1ZZLJ7";
+
+    let userId = "";
+    let displayName = "";
+
+    async function main() {
+      await liff.init({ liffId });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+      const profile = await liff.getProfile();
+      userId = profile.userId;
+      displayName = profile.displayName;
+      console.log("登入完成：", userId, displayName);
+    }
+
+    document.getElementById("drawBtn").addEventListener("click", () => {
+      google.script.run.withSuccessHandler(function(count){
+        console.log("今天已抽：", count);
+        if(count >= 3){
+          alert("您今天已經抽獎三次，請明天再來！");
+          return;
+        }
+        google.script.run.recordDraw(userId);
+        alert("恭喜中獎！");
+        document.getElementById("form").style.display = "block";
+      }).checkDrawQuota(userId);
+    });
+
+    document.getElementById("submitBtn").addEventListener("click", () => {
+      const name = document.getElementById("winnerName").value;
+      const phone = document.getElementById("winnerPhone").value;
+      if (!name || !phone) {
+        alert("請輸入完整資料");
+        return;
+      }
+      google.script.run.withSuccessHandler(function(){
+        alert("✅ 已送出中獎資料！");
+        document.getElementById("submitBtn").disabled = true;
+        document.getElementById("submitBtn").style.backgroundColor = "#555";
+        document.getElementById("submitBtn").textContent = "已送出";
+        liff.closeWindow();
+      }).recordWinner({
+        userId,
+        displayName,
+        game: "手機抽獎",
+        prize: "測試獎項",
+        name,
+        phone
+      });
+    });
+
+    main();
+  </script>
+</body>
+</html>
