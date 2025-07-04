@@ -32,9 +32,9 @@
     }
     button {
       width: 100%;
-      padding: 50px;
+      padding: 30px;
       margin-top: 30px;
-      font-size: 2.2rem;
+      font-size: 2rem;
       background: #28a745;
       color: #fff;
       border: none;
@@ -52,9 +52,9 @@
     }
     input {
       width: 92%;
-      padding: 30px;
-      font-size: 3rem;
-      margin-top: 50px;
+      padding: 20px;
+      font-size: 1.5rem;
+      margin-top: 20px;
       border-radius: 8px;
       border: none;
     }
@@ -75,16 +75,17 @@
 <body>
   <div class="app">
     <h1>🎉 LINE 抽獎 🎉</h1>
-    <button id="drawBtn" disabled>載入中...</button>
+    <button id="startBtn">開始遊戲</button>
+    <button id="drawBtn" disabled style="display:none;">抽獎</button>
 
-    <video id="drawVideo" playsinline muted>
+    <video id="drawVideo" playsinline>
       <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
     </video>
 
     <div id="result"></div>
 
     <div id="form">
-      <h3>恭喜中獎！請填寫以下資料</h3>
+      <h3>🎊 恭喜中獎！請填寫以下資料</h3>
       <input type="text" id="winnerName" placeholder="輸入您的姓名" />
       <input type="tel" id="winnerPhone" placeholder="輸入您的電話" />
       <button id="submitBtn">送出中獎資料</button>
@@ -96,6 +97,8 @@
     const liffId = "1656871455-vE1ZZLJ7";
     let userId = "";
     let displayName = "";
+
+    const startBtn = document.getElementById("startBtn");
     const drawBtn = document.getElementById("drawBtn");
     const drawVideo = document.getElementById("drawVideo");
     const result = document.getElementById("result");
@@ -111,28 +114,34 @@
         userId = profile.userId;
         displayName = profile.displayName;
         console.log("登入完成：", userId, displayName);
-        drawBtn.disabled = false;
-        drawBtn.textContent = "點我抽獎";
+
+        startBtn.disabled = false;
       } catch (err) {
         console.error("LIFF 初始化失敗", err);
-        drawBtn.textContent = "載入失敗，請重試";
+        startBtn.textContent = "載入失敗，請重試";
       }
     }
 
+    startBtn.addEventListener("click", () => {
+      startBtn.style.display = "none";
+      drawBtn.style.display = "block";
+      drawBtn.disabled = false;
+    });
+
     drawBtn.addEventListener("click", () => {
-      drawBtn.disabled = true;
       drawBtn.style.display = "none";
       drawVideo.style.display = "block";
       result.style.display = "none";
 
+      drawVideo.muted = false;  // 開啟聲音
       drawVideo.currentTime = 0;
-      drawVideo.play();
+      drawVideo.play().catch(err => console.warn("影片播放錯誤:", err));
 
       setTimeout(() => {
         drawVideo.pause();
         drawVideo.style.display = "none";
 
-        // 中獎機率 50%
+        // 50% 機率中獎
         const win = Math.random() < 0.5;
 
         if (win) {
@@ -140,11 +149,9 @@
           document.getElementById("form").style.display = "block";
         } else {
           result.textContent = "😭 銘謝惠顧，再接再厲！";
-          drawBtn.disabled = false;
           drawBtn.style.display = "block";
         }
         result.style.display = "block";
-
       }, 10000); // 10 秒
     });
 
