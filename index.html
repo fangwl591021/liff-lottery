@@ -1,97 +1,32 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LINE 抽獎</title>
   <style>
     body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei"; }
     button { padding:20px; margin-top:20px; width:80%; font-size:1.5em; }
-    input { display:block; margin:10px auto; padding:10px; width:80%; }
     video { width:100%; max-width:400px; margin-top:20px; display:none; }
-    #result { margin-top:20px; font-size:1.5em; color:gold; }
-    #winnerForm { display:none; }
   </style>
 </head>
 <body>
   <h1>🎉 LINE 抽獎 🎉</h1>
-  <button id="startBtn" disabled>載入中...</button>
-
+  <button id="startBtn">開始抽獎</button>
   <video id="drawVideo" playsinline>
-    <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
+    <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
   </video>
-
-  <div id="result"></div>
-
-  <div id="winnerForm">
-    <h3>恭喜中獎，請填寫資料</h3>
-    <input id="name" placeholder="姓名">
-    <input id="phone" placeholder="電話">
-    <button id="submitBtn">送出</button>
-  </div>
-
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script>
-    const liffId = "1656871455-vE1ZZLJ7";
-    const appsScriptUrl = "https://script.google.com/macros/s/AKfycbwnfF0U6fMtrTMhj358bQQpEi4eo6HL-KYUIAk5BnoeRhjM9OTVrcJx42PQPhm1gJgP/exec";
-    let userId="", displayName="";
     const startBtn = document.getElementById("startBtn");
-    const drawVideo = document.getElementById("drawVideo");
-    const result = document.getElementById("result");
-    const winnerForm = document.getElementById("winnerForm");
-
-    async function init(){
-      await liff.init({ liffId });
-      if(!liff.isLoggedIn()){ liff.login(); return; }
-      const profile = await liff.getProfile();
-      userId=profile.userId;
-      displayName=profile.displayName;
-      startBtn.disabled=false;
-      startBtn.textContent="開始抽獎";
-    }
-
-    startBtn.addEventListener("click", ()=>{
+    const video = document.getElementById("drawVideo");
+    startBtn.addEventListener("click", () => {
       startBtn.style.display="none";
-      drawVideo.style.display="block";
-      drawVideo.currentTime=0;
-      drawVideo.play().catch(()=>alert("請點擊播放按鈕以啟用音效"));
-
-      setTimeout(()=>{
-        drawVideo.pause();
-        drawVideo.style.display="none";
-        const win = Math.random()<0.5;
-        if(win){
-          result.textContent="🎊 中獎!";
-          winnerForm.style.display="block";
-        }else{
-          result.textContent="😭 銘謝惠顧";
-          startBtn.style.display="block";
-        }
-      },10000);
+      video.style.display="block";
+      video.currentTime=0;
+      video.play()
+        .then(() => console.log("影片播放中"))
+        .catch(err => console.error("影片播放失敗", err));
     });
-
-    document.getElementById("submitBtn").addEventListener("click", async()=>{
-      const name=document.getElementById("name").value.trim();
-      const phone=document.getElementById("phone").value.trim();
-      if(!name || !phone){ alert("請填完整"); return; }
-      console.log("送出中獎資料：", {userId, displayName, name, phone});
-
-      try{
-        const res=await fetch(appsScriptUrl+"?action=recordWinner",{
-          method:"POST",
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            userId, displayName, game:"手機抽獎", prize:"測試獎項", name, phone
-          })
-        });
-        alert("✅ 已送出！");
-        liff.closeWindow();
-      }catch(e){
-        alert("送出失敗: "+e.message);
-      }
-    });
-
-    init();
   </script>
 </body>
 </html>
