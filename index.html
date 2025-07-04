@@ -43,6 +43,7 @@
     button:disabled {
       background-color: #555 !important;
       color: #ccc !important;
+      cursor: not-allowed; /* 為禁用按鈕添加一個禁止符號 */
     }
     #form {
       display: none;
@@ -62,7 +63,7 @@
 <body>
   <div class="app">
     <h1>🎉 LINE 抽獎 🎉</h1>
-    <button id="drawBtn">點我抽獎</button>
+    <button id="drawBtn" disabled>載入中...</button>
 
     <div id="form">
       <h3>恭喜中獎！請填寫以下資料</h3>
@@ -78,20 +79,38 @@
 
     let userId = "";
     let displayName = "";
+    const drawBtn = document.getElementById("drawBtn"); // 獲取抽獎按鈕元素
 
     async function main() {
-      await liff.init({ liffId });
-      if (!liff.isLoggedIn()) {
-        liff.login();
-        return;
+      try {
+        await liff.init({ liffId });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+        displayName = profile.displayName;
+        console.log("登入完成：", userId, displayName);
+
+        // 成功登入後，啟用抽獎按鈕並更改文字
+        drawBtn.disabled = false;
+        drawBtn.textContent = "點我抽獎";
+
+      } catch (err) {
+        console.error("LIFF 初始化失敗", err);
+        // 向用戶顯示錯誤訊息或優雅地處理錯誤
+        drawBtn.textContent = "載入失敗，請重試";
       }
-      const profile = await liff.getProfile();
-      userId = profile.userId;
-      displayName = profile.displayName;
-      console.log("登入完成：", userId, displayName);
     }
 
-    document.getElementById("drawBtn").addEventListener("click", () => {
+    drawBtn.addEventListener("click", () => {
+      // 儘管按鈕已被禁用，在這裡再次檢查 userId 是否可用是個好習慣。
+      if (!userId) {
+        alert("LIFF 資訊尚未載入，請稍候再試。");
+        return;
+      }
+
       google.script.run.withSuccessHandler(function(count){
         console.log("今天已抽：", count);
         if(count >= 3){
@@ -105,41 +124,41 @@
     });
 
     document.getElementById("submitBtn").addEventListener("click", () => {
-  const name = document.getElementById("winnerName").value;
-  const phone = document.getElementById("winnerPhone").value;
+      const name = document.getElementById("winnerName").value;
+      const phone = document.getElementById("winnerPhone").value;
 
-  if (!name || !phone) {
-    alert("請輸入完整資料");
-    return;
-  }
+      if (!name || !phone) {
+        alert("請輸入完整資料");
+        return;
+      }
 
-  // 先馬上鎖住按鈕
-  const btn = document.getElementById("submitBtn");
-  btn.disabled = true;
-  btn.style.backgroundColor = "#555";
-  btn.textContent = "送出中...";
+      // 先馬上鎖住按鈕
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.style.backgroundColor = "#555";
+      btn.textContent = "送出中...";
 
-  // 再呼叫 server
-  google.script.run.withSuccessHandler(function(){
-      alert("✅ 已送出中獎資料！");
-      btn.textContent = "已送出";
-      liff.closeWindow();
-  }).withFailureHandler(function(err){
-      alert("送出失敗：" + err.message);
-      btn.disabled = false;
-      btn.style.backgroundColor = "#28a745";
-      btn.textContent = "重新送出";
-  }).recordWinner({
-      userId,
-      displayName,
-      game: "手機抽獎",
-      prize: "測試獎項",
-      name,
-      phone
-  });
-});
+      // 再呼叫 server
+      google.script.run.withSuccessHandler(function(){
+        alert("✅ 已送出中獎資料！");
+        btn.textContent = "已送出";
+        liff.closeWindow();
+      }).withFailureHandler(function(err){
+        alert("送出失敗：" + err.message);
+        btn.disabled = false;
+        btn.style.backgroundColor = "#28a745";
+        btn.textContent = "重新送出";
+      }).recordWinner({
+        userId,
+        displayName,
+        game: "手機抽獎",
+        prize: "測試獎項",
+        name,
+        phone
+      });
+    });
 
-
+    // 呼叫 main 函式以開始 LIFF 初始化
     main();
   </script>
 </body>
