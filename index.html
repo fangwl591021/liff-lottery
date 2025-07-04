@@ -23,78 +23,75 @@
       width: 100%;
       box-sizing: border-box;
       text-align: center;
+      padding: 10px;
     }
     h1 {
       font-size: 2rem;
+      margin: 20px 0;
       color: gold;
-      margin-bottom: 10px;
     }
-    #drawVideo {
+    video {
       width: 100%;
-      max-width: 500px;
-      border-radius: 12px;
+      max-width: 480px;
+      border-radius: 10px;
     }
     #result {
-      font-size: 2rem;
-      color: yellow;
       margin-top: 20px;
+      font-size: 2rem;
       display: none;
     }
     #form {
       display: none;
-      margin-top: 20px;
-      width: 90%;
-      max-width: 400px;
-    }
-    input {
       width: 100%;
-      padding: 15px;
-      font-size: 1.2rem;
-      margin-top: 15px;
-      border-radius: 6px;
+      max-width: 400px;
+      margin-top: 20px;
+    }
+    #form input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-size: 1rem;
       border: none;
     }
-    button {
+    #form button {
       width: 100%;
-      padding: 15px;
-      font-size: 1.5rem;
-      margin-top: 20px;
+      padding: 12px;
+      font-size: 1.2rem;
+      margin-top: 10px;
       background: #28a745;
       color: #fff;
       border: none;
-      border-radius: 6px;
+      border-radius: 5px;
     }
-    button:disabled {
-      background-color: #555 !important;
-      color: #ccc !important;
-      cursor: not-allowed;
+    #form button:disabled {
+      background: #555;
+      color: #ccc;
     }
   </style>
 </head>
 <body>
   <div class="app">
     <h1>🎉 LINE 抽獎 🎉</h1>
-    <video id="drawVideo" playsinline controls autoplay>
+    <video id="drawVideo" playsinline autoplay controls>
       <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
-      您的瀏覽器不支援影片。
+      抱歉，您的瀏覽器無法播放影片
     </video>
     <div id="result"></div>
     <div id="form">
-      <h3>請填寫以下資料以完成中獎登錄</h3>
-      <input type="text" id="winnerName" placeholder="輸入您的姓名">
-      <input type="tel" id="winnerPhone" placeholder="輸入您的電話">
-      <button id="submitBtn">送出中獎資料</button>
+      <h3>恭喜中獎！請填寫以下資料</h3>
+      <input type="text" id="winnerName" placeholder="請輸入姓名">
+      <input type="tel" id="winnerPhone" placeholder="請輸入電話">
+      <button id="submitBtn">送出資料</button>
     </div>
   </div>
-
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script>
     const liffId = "1656871455-vE1ZZLJ7";
+    const backendUrl = "https://script.google.com/macros/s/AKfycbwnfF0U6fMtrTMhj358bQQpEi4eo6HL-KYUIAk5BnoeRhjM9OTVrcJx42PQPhm1gJgP/exec";
+
     let userId = "";
     let displayName = "";
-    const video = document.getElementById("drawVideo");
-    const result = document.getElementById("result");
-    const form = document.getElementById("form");
 
     async function main() {
       try {
@@ -106,42 +103,41 @@
         const profile = await liff.getProfile();
         userId = profile.userId;
         displayName = profile.displayName;
-        console.log("登入完成：", userId, displayName);
+        console.log("登入完成", userId, displayName);
 
-        // 影片一進入就播
-        video.play();
-
-        // 10秒後進行判斷
+        // 10秒後決定
         setTimeout(() => {
-          video.pause();
-          const win = Math.random() < 0.5; // 50% 中獎率
-          if (win) {
+          document.getElementById("drawVideo").pause();
+          const win = Math.random() < 0.5; // 50% 中獎
+          const result = document.getElementById("result");
+          if(win){
             result.textContent = "🎊 恭喜中獎！";
-            form.style.display = "block";
-          } else {
-            result.textContent = "😭 銘謝惠顧，明天再來！";
+            document.getElementById("form").style.display = "block";
+          }else{
+            result.textContent = "😭 銘謝惠顧，歡迎再來挑戰";
           }
           result.style.display = "block";
         }, 10000);
 
-      } catch (err) {
-        console.error("LIFF 初始化失敗", err);
-        alert("載入失敗，請重新整理");
+      } catch(e) {
+        console.error(e);
+        alert("LIFF 初始化失敗");
       }
     }
 
     document.getElementById("submitBtn").addEventListener("click", () => {
-      const name = document.getElementById("winnerName").value.trim();
-      const phone = document.getElementById("winnerPhone").value.trim();
+      const name = document.getElementById("winnerName").value;
+      const phone = document.getElementById("winnerPhone").value;
       if (!name || !phone) {
-        alert("請輸入完整資料");
+        alert("請輸入完整資訊");
         return;
       }
       const btn = document.getElementById("submitBtn");
       btn.disabled = true;
       btn.textContent = "送出中...";
 
-      fetch(`https://script.google.com/macros/s/AKfycbwnfF0U6fMtrTMhj358bQQpEi4eo6HL-KYUIAk5BnoeRhjM9OTVrcJx42PQPhm1gJgP/exec?userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName)}&game=手機抽獎&prize=測試獎項&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}`)
+      const url = `${backendUrl}?userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName)}&game=手機抽獎&prize=中獎&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}`;
+      fetch(url)
         .then(() => {
           alert("✅ 已送出中獎資料！");
           liff.closeWindow();
