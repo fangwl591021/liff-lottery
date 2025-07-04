@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>LINE 抽獎</title>
   <style>
     html, body {
@@ -20,126 +20,120 @@
       align-items: center;
       justify-content: center;
       height: 100%;
-      width: 100%;
+      padding: 20px;
       box-sizing: border-box;
-      text-align: center;
-      padding: 10px;
     }
     h1 {
       font-size: 2rem;
-      margin: 20px 0;
+      margin-bottom: 20px;
       color: gold;
+      text-align: center;
     }
-    video {
-      width: 100%;
-      max-width: 480px;
-      border-radius: 10px;
-    }
-    #result {
-      margin-top: 20px;
+    button {
+      padding: 20px 40px;
       font-size: 2rem;
-      display: none;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      margin-top: 20px;
     }
     #form {
       display: none;
+      flex-direction: column;
       width: 100%;
       max-width: 400px;
       margin-top: 20px;
     }
-    #form input {
+    input {
       width: 100%;
-      padding: 12px;
+      padding: 15px;
+      font-size: 1.2rem;
       margin: 10px 0;
       border-radius: 5px;
-      font-size: 1rem;
       border: none;
     }
-    #form button {
+    video {
       width: 100%;
-      padding: 12px;
-      font-size: 1.2rem;
-      margin-top: 10px;
-      background: #28a745;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-    }
-    #form button:disabled {
-      background: #555;
-      color: #ccc;
+      max-width: 600px;
+      display: none;
+      margin-top: 20px;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
   <div class="app">
     <h1>🎉 LINE 抽獎 🎉</h1>
-    <video id="drawVideo" playsinline autoplay controls>
-      <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
-      抱歉，您的瀏覽器無法播放影片
+    <button id="startBtn">開始抽獎</button>
+
+    <video id="drawVideo" playsinline>
+      <source src="https://你的影片連結.mp4" type="video/mp4" />
     </video>
-    <div id="result"></div>
+
     <div id="form">
-      <h3>恭喜中獎！請填寫以下資料</h3>
-      <input type="text" id="winnerName" placeholder="請輸入姓名">
-      <input type="tel" id="winnerPhone" placeholder="請輸入電話">
-      <button id="submitBtn">送出資料</button>
+      <h3>🎊 恭喜中獎！請填寫以下資料</h3>
+      <input type="text" id="winnerName" placeholder="輸入姓名" />
+      <input type="tel" id="winnerPhone" placeholder="輸入電話" />
+      <button id="submitBtn">送出中獎資料</button>
     </div>
   </div>
+
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script>
     const liffId = "1656871455-vE1ZZLJ7";
-    const backendUrl = "https://script.google.com/macros/s/AKfycbwnfF0U6fMtrTMhj358bQQpEi4eo6HL-KYUIAk5BnoeRhjM9OTVrcJx42PQPhm1gJgP/exec";
-
     let userId = "";
     let displayName = "";
 
     async function main() {
-      try {
-        await liff.init({ liffId });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
-        const profile = await liff.getProfile();
-        userId = profile.userId;
-        displayName = profile.displayName;
-        console.log("登入完成", userId, displayName);
-
-        // 10秒後決定
-        setTimeout(() => {
-          document.getElementById("drawVideo").pause();
-          const win = Math.random() < 0.5; // 50% 中獎
-          const result = document.getElementById("result");
-          if(win){
-            result.textContent = "🎊 恭喜中獎！";
-            document.getElementById("form").style.display = "block";
-          }else{
-            result.textContent = "😭 銘謝惠顧，歡迎再來挑戰";
-          }
-          result.style.display = "block";
-        }, 10000);
-
-      } catch(e) {
-        console.error(e);
-        alert("LIFF 初始化失敗");
+      await liff.init({ liffId });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
       }
+      const profile = await liff.getProfile();
+      userId = profile.userId;
+      displayName = profile.displayName;
+      console.log("登入成功:", userId, displayName);
     }
+
+    document.getElementById("startBtn").addEventListener("click", () => {
+      const video = document.getElementById("drawVideo");
+      video.style.display = "block";
+      video.currentTime = 0;
+      video.play().catch(err => console.error("播放失敗", err));
+      document.getElementById("startBtn").style.display = "none";
+
+      setTimeout(() => {
+        video.pause();
+        video.style.display = "none";
+
+        // 50% 機率中獎
+        const win = Math.random() < 0.5;
+        if (win) {
+          document.getElementById("form").style.display = "flex";
+        } else {
+          alert("😢 很遺憾，銘謝惠顧！");
+          liff.closeWindow();
+        }
+      }, 10000); // 10秒
+    });
 
     document.getElementById("submitBtn").addEventListener("click", () => {
       const name = document.getElementById("winnerName").value;
       const phone = document.getElementById("winnerPhone").value;
       if (!name || !phone) {
-        alert("請輸入完整資訊");
+        alert("請輸入完整資料");
         return;
       }
       const btn = document.getElementById("submitBtn");
       btn.disabled = true;
       btn.textContent = "送出中...";
 
-      const url = `${backendUrl}?userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName)}&game=手機抽獎&prize=中獎&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}`;
+      const url = `https://script.google.com/macros/s/你的AppsScriptID/exec?userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName)}&game=影片抽獎&prize=幸運獎&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}`;
       fetch(url)
         .then(() => {
-          alert("✅ 已送出中獎資料！");
+          alert("✅ 已送出！");
           liff.closeWindow();
         })
         .catch(err => {
