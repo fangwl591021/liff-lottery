@@ -1,110 +1,51 @@
 const SHEET_ID = '1IhVlMOpwdk66R7a1sFfyqUzJWcHyZrUNKR09BxdFkFY';
-const DRAW_LOG_SHEET = '抽獎紀錄表';
-const WINNER_SHEET = '中獎紀錄表';
+const PRIZE_SHEET = '中獎紀錄表';
+const DRAW_SHEET = '抽獎紀錄表';
 
-// 主入口點，處理來自前端的各種請求
-function doGet(e) {
-  const action = e.parameter.action; // 從 URL 參數中獲取動作類型
-
-  // 設置 CORS 頭部，允許來自 GitHub Pages 的請求
-  const headers = {
-    'Access-Control-Allow-Origin': 'https://fangwl591021.github.io', // 允許您的 GitHub Pages 域名
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', // 允許的方法
-    'Access-Control-Allow-Headers': 'Content-Type', // 允許的頭部
-  };
-
-  // 處理 OPTIONS 請求 (CORS 預檢請求)
-  if (e.parameter.method === 'OPTIONS') {
-    return ContentService.createTextOutput('')
-      .setMimeType(ContentService.MimeType.TEXT)
-      .setHeaders(headers);
-  }
-
-  let result;
-  try {
-    switch (action) {
-      case 'checkDrawQuota':
-        const userIdForQuota = e.parameter.userId;
-        result = checkDrawQuota(userIdForQuota);
-        break;
-      case 'recordDraw':
-        const userIdForDraw = e.parameter.userId;
-        const displayNameForDraw = e.parameter.displayName; // 如果前端傳遞了
-        const drawResult = e.parameter.drawResult; // 如果前端傳遞了
-        result = recordDraw(userIdForDraw, displayNameForDraw, drawResult);
-        break;
-      case 'recordWinner':
-        // 從參數中獲取所有詳細資訊
-        const winnerDetail = {
-          userId: e.parameter.userId,
-          displayName: e.parameter.displayName,
-          game: e.parameter.game,
-          prize: e.parameter.prize,
-          name: e.parameter.name,
-          phone: e.parameter.phone
-        };
-        result = recordWinner(winnerDetail);
-        break;
-      default:
-        result = 'Unknown action';
-        break;
-    }
-  } catch (error) {
-    // 錯誤處理
-    console.error("Apps Script Error:", error);
-    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.message }))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders(headers); // 也要設置 CORS 頭部
-  }
-
-  // 返回 JSON 格式的結果
-  return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: result }))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders(headers); // 也要設置 CORS 頭部
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index');
 }
 
-// 實際記錄所有抽獎的函式
-// 由於前端將透過 URL 參數傳遞，這裡直接使用
-function recordDraw(userId, displayName, drawResult) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DRAW_LOG_SHEET);
-  // 確保 displayName 和 drawResult 即使為 undefined 也能寫入
+// 記錄中獎
+function recordWinner(data) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(PRIZE_SHEET);
   sheet.appendRow([
-    userId || '',
-    displayName || '',
-    drawResult || '',
+    data.userId || '',
+    data.displayName || '',
+    data.game || '',
+    data.prize || '',
+    data.name || '',
+    data.phone || '',
+    new Date(), // 中獎時間
+    Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd"), // 抽獎日期
+    '', // 是否核銷
+    '', // 核銷時間
+    '', // 店家名稱
+    ''  // 店家備註
+  ]);
+  return 'OK';
+}
+
+// 記錄抽獎
+function recordDraw(userId, displayName) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DRAW_SHEET);
+  sheet.appendRow([
+    userId,
     Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
   ]);
   return 'OK';
 }
 
-// 實際記錄中獎者詳細的函式
-function recordWinner(detail) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(WINNER_SHEET);
-  sheet.appendRow([
-    detail.userId || '',
-    detail.displayName || '',
-    detail.game || '',
-    detail.prize || '',
-    detail.name || '',
-    detail.phone || '',
-    Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-    Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd"),
-    '', '', '', ''
-  ]);
-  return 'OK';
-}
 
-// 實際檢查抽獎配額的函式
+// 檢查當日已抽次數
 function checkDrawQuota(userId) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DRAW_LOG_SHEET);
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DRAW_SHEET);
   const today = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
   const data = sheet.getDataRange().getValues();
-
+  
   let count = 0;
   for (let i = 1; i < data.length; i++) {
-    // 檢查 userId 是否匹配，並且日期部分是否匹配今天
-    // 假設 userId 在第一欄 (索引 0)，時間戳記在第四欄 (索引 3)
-    if (data[i][0] === userId && String(data[i][3]).startsWith(today)) {
+    if (data[i][0] === userId && data[i][2].startsWith(today)) {
       count++;
     }
   }
