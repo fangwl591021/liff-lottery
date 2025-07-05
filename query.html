@@ -25,48 +25,41 @@
   <div id="list"><div class="loading">載入中…</div></div>
 
   <script>
-    const LIFF_ID = '1656871455-1R577Ndy';
+    const LIFF_ID = '1656871455-vE1ZZLJ7';
     const API     = 'https://script.google.com/macros/s/AKfycbxnxsaq6p9M7NcRcVBSyqro1HEWEbwjNDGttlMoby1PMLBwUP-aX4F5UBFrNmmuaZrZ/exec';
 
     async function init() {
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        if (!liff.isLoggedIn()) return liff.login();
-        const uid = (await liff.getProfile()).userId;
-        loadRecords(uid);
-      } catch (e) {
-        showError('LIFF 初始化失敗');
-        console.error(e);
-      }
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) return liff.login();
+      const uid = (await liff.getProfile()).userId;
+      loadRecords(uid);
     }
 
-    async function loadRecords(userId) {
+    async function loadRecords(uid) {
       const list = document.getElementById('list');
       list.innerHTML = '<div class="loading">載入中…</div>';
       try {
         const res = await fetch(API, {
-          method: 'POST',
-          mode:   'cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ act:'query', userId })
+          method: 'POST', mode: 'cors',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ act:'query', userId: uid })
         });
         if (!res.ok) throw new Error(res.status);
-        const json = await res.json();
-        if (json.status !== 'ok') throw new Error(json.message||'後端回傳錯誤');
-        render(json.data);
-      } catch (e) {
-        showError('載入失敗：' + e.message);
-        console.error(e);
+        const j = await res.json();
+        if (j.status!=='ok') throw new Error(j.message||'後端錯誤');
+        render(j.data);
+      } catch(err) {
+        list.innerHTML = `<div class="error">讀取失敗：${err.message}</div>`;
       }
     }
 
     function render(arr) {
       const list = document.getElementById('list');
-      if (!arr || arr.length===0) {
+      if (!arr || !arr.length) {
         list.innerHTML = '<p class="loading">尚無中獎紀錄</p>';
         return;
       }
-      list.innerHTML = arr.map(o => `
+      list.innerHTML = arr.map(o=>`
         <div class="card" id="c${o.row}">
           <h3>${o.lineName}</h3>
           <div class="info">
@@ -81,29 +74,21 @@
     }
 
     async function redeem(row, btn) {
-      btn.disabled = true;
-      btn.textContent = '處理中…';
+      btn.disabled = true; btn.textContent='處理中…';
       try {
         const res = await fetch(API, {
-          method: 'POST',
-          mode:   'cors',
-          headers: { 'Content-Type': 'application/json' },
+          method:'POST', mode:'cors',
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ act:'redeem', row })
         });
         const j = await res.json();
-        if (j.status!=='ok') throw new Error(j.message||'核銷錯誤');
-        btn.className = 'redeemBtn done';
-        btn.innerHTML = `已核銷<br>${j.data}`;
-      } catch (e) {
-        alert('核銷失敗：' + e.message);
-        console.error(e);
-        btn.disabled = false;
-        btn.textContent = '核銷';
+        if (j.status!=='ok') throw new Error(j.message);
+        btn.className='redeemBtn done';
+        btn.innerHTML=`已核銷<br>${j.data}`;
+      } catch(e) {
+        alert('核銷失敗：'+e.message);
+        btn.disabled=false; btn.textContent='核銷';
       }
-    }
-
-    function showError(msg) {
-      document.getElementById('list').innerHTML = `<div class="error">${msg}</div>`;
     }
 
     init();
