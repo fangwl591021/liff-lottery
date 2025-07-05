@@ -65,8 +65,11 @@ mv.onpause = ()=>{                              // 影片結束
   })});
 
   if(win){
-    formBox.style.display="block"; inName.value=uname;
-  }else{
+  msg.textContent = "🎊 恭喜中獎！";
+  formBox.style.display = "block";
+  inName.value = uname;
+  btnSend.style.display = "block";   // ← 這行
+} else{
     btnPlay.style.display="block"; btnPlay.disabled=false;
   }
 };
