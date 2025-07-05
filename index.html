@@ -5,9 +5,11 @@
 <style>
  body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
  h1{color:gold;margin:24px 0 12px}
- #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px}
- #play{background:#28a745;color:#fff} #submit{background:#ffc107;color:#000;display:none}
- #wrapSubmit{display:flex;justify-content:center}  /* ←外層置中 */
+ #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px;transition:.2s}
+ #play{background:#28a745;color:#fff}
+ #submit{background:#ffc107;color:#000;display:none}
+ #submit[disabled]{background:#555;color:#ccc}
+ #wrapSubmit{display:flex;justify-content:center}
  video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
  input{width:80%;max-width:320px;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
  #msg{margin:18px 0 8px;font-size:1.4em;font-weight:bold}
@@ -15,10 +17,11 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head><body>
 <h1>🎰 轉轉小瑪莉</h1>
+
 <button id="play" disabled>載入中…</button>
 
 <video id="mv" playsinline>
- <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
+  <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
 </video>
 
 <div id="msg"></div>
@@ -32,59 +35,94 @@
 <audio id="winSound" src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
 
 <script>
+/* 基本設定 ---------------------------------------------------- */
 const LIFF_ID="1656871455-vE1ZZLJ7";
 const API    ="https://script.google.com/macros/s/AKfycbz5BN_n2nlKNduRax7CsQjhZOWFBYaOSeCML8iKNtpJzpHmAC2LpXuhNn3coALL7HRv/exec";
 
-let uid="",uname="";
-const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
-      msg=document.getElementById("msg"), form=document.getElementById("form"),
-      inName=document.getElementById("username"), inPhone=document.getElementById("phone"),
-      btnSend=document.getElementById("submit"), winSound=document.getElementById("winSound");
+/* DOM 變數 ---------------------------------------------------- */
+const btnPlay=document.getElementById("play"),
+      mv      =document.getElementById("mv"),
+      msg     =document.getElementById("msg"),
+      formBox =document.getElementById("form"),
+      inName  =document.getElementById("username"),
+      inPhone =document.getElementById("phone"),
+      btnSend =document.getElementById("submit"),
+      winSound=document.getElementById("winSound");
 
-/* --- LIFF init --- */
+let uid="", uname="";
+
+/* ---------- LIFF 初始化 ---------- */
 (async()=>{
   await liff.init({liffId:LIFF_ID});
-  if(!liff.isLoggedIn()){ liff.login();return; }
-  const p=await liff.getProfile(); uid=p.userId; uname=p.displayName;
+  if(!liff.isLoggedIn()){ liff.login(); return; }
+
+  const p = await liff.getProfile();
+  uid=p.userId; uname=p.displayName;
+
+  /* 為了讓音樂之後能自動播放，先在同一手勢內觸發一次 play+pause */
+  btnPlay.addEventListener("click", ()=>{ winSound.play().then(()=>winSound.pause()); }, {once:true});
+
   btnPlay.disabled=false; btnPlay.textContent="開始遊戲";
 })();
 
-/* --- play --- */
+/* ---------- 開始遊戲 ---------- */
 btnPlay.onclick=()=>{
   btnPlay.style.display="none"; msg.textContent="";
   mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(),10000);               // 10s 保險
+  setTimeout(()=>mv.pause(),10000);          // 10 秒保險
 };
 
+/* ---------- 影片結束 ---------- */
 mv.onpause=()=>{
   mv.style.display="none";
   const win=Math.random()<0.5;
   msg.textContent=win?"🎊 恭喜中獎！":"😭 再接再厲！";
 
-  fetch(API,{method:"POST",mode:"no-cors",
-    headers:{"Content-Type":"text/plain"},
+  fetch(API,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
     body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
   });
 
   if(win){
     winSound.currentTime=0; winSound.play().catch(()=>{});
-    form.style.display="block"; inName.value=uname; btnSend.style.display="block";
-  }else{ btnPlay.style.display="block"; btnPlay.disabled=false; }
+    formBox.style.display="block";
+    inName.value=uname;
+    btnSend.style.display="block";
+  }else{
+    btnPlay.style.display="block"; btnPlay.disabled=false;
+  }
 };
 
-/* --- send winner --- */
+/* ---------- 送出得獎者資料 ---------- */
 btnSend.onclick=()=>{
- if(!inName.value||!inPhone.value){alert("請填姓名與手機");return;}
- btnSend.disabled=true; btnSend.innerText="送出中…";
- btnSend.disabled=true; btnSend.style.background="#555"; btnSend.innerText="送出中…";
+  if(!inName.value.trim()||!inPhone.value.trim()){
+    alert("請填姓名與手機"); return;
+  }
 
- fetch(API,{method:"POST",mode:"no-cors",
-   headers:{"Content-Type":"text/plain"},
-   body:JSON.stringify({
-     act:"winner",userId:uid,displayName:uname,
-     prize:"預設獎項",name:inName.value,phone:inPhone.value})
- }).then(()=>{alert("✅ 已送出！");liff.closeWindow();})
-   .catch(e=>{alert("送出失敗");btnSend.disabled=false;btnSend.innerText="重新送出";});
+  // 立即鎖定按鈕
+  btnSend.disabled=true; btnSend.innerText="送出中…";
+
+  fetch(API,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      act:"winner",
+      userId:uid, displayName:uname,
+      prize:"預設獎項",
+      name:inName.value.trim(),
+      phone:inPhone.value.trim()
+    })
+  })
+  .then(r=>r.json())
+  .then(res=>{
+      if(res.status==="ok"){ alert("✅ 已送出！"); liff.closeWindow(); }
+      else{ throw new Error(res.message||"server error"); }
+  })
+  .catch(err=>{
+      alert("送出失敗，請再試一次");
+      btnSend.disabled=false; btnSend.innerText="重新送出";
+  });
 };
 </script>
 </body></html>
