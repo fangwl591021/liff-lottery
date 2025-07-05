@@ -7,8 +7,7 @@
  h1{color:gold;margin:24px 0 12px}
  #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px}
  #play{background:#28a745;color:#fff} #submit{background:#ffc107;color:#000;display:none}
- <!-- ★ 1. 只改這 1 行 CSS，讓外層寬度 100% 就能完全置中 -->
-#wrapSubmit{display:flex;justify-content:center}  /* ←外層置中 */
+ #wrapSubmit{display:flex;justify-content:center}
  video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
  input{width:80%;max-width:320px;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
  #msg{margin:18px 0 8px;font-size:1.4em;font-weight:bold}
@@ -30,7 +29,9 @@
   <div id="wrapSubmit"><button id="submit">送出</button></div>
 </div>
 
-<audio id="winSound" src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
+<!-- ❶ 增加 preload="auto" 讓音檔先載入 -->
+<audio id="winSound" preload="auto"
+       src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
 
 <script>
 const LIFF_ID="1656871455-vE1ZZLJ7";
@@ -52,12 +53,13 @@ const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
 
 /* --- play --- */
 btnPlay.onclick=()=>{
+  winSound.load();                     // ❷ 先把音檔緩存
   btnPlay.style.display="none"; msg.textContent="";
   mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(),7000);               // 10s 保險
+  setTimeout(()=>mv.pause(),7000);
 };
 
-mv.onpause=()=>{
+mv.onpause=async ()=>{
   mv.style.display="none";
   const win=Math.random()<0.5;
   msg.textContent=win?"🎊 恭喜中獎！":"😭 再接再厲！";
@@ -68,20 +70,19 @@ mv.onpause=()=>{
   });
 
   if(win){
-    winSound.currentTime=0; winSound.play().catch(()=>{});
+    try{ await winSound.play(); }catch(_){}
     form.style.display="block"; inName.value=uname; btnSend.style.display="block";
-  }else{ btnPlay.style.display="block"; btnPlay.disabled=false; }
+  }else{
+    btnPlay.style.display="block"; btnPlay.disabled=false;
+  }
 };
 
-/* --- send winner --- */
 /* --- send winner --- */
 btnSend.onclick = ()=>{
   if(!inName.value.trim() || !inPhone.value.trim()){
       alert("請填姓名與手機");return;
   }
-  btnSend.disabled = true;
-  btnSend.innerText = "送出中…";
-  btnSend.style.background = "#555";
+  btnSend.disabled=true; btnSend.innerText="送出中…"; btnSend.style.background="#555";
 
   fetch(API,{
     method:"POST",mode:"no-cors",
@@ -92,23 +93,15 @@ btnSend.onclick = ()=>{
       name:inName.value.trim(), phone:inPhone.value.trim()
     })
   }).then(()=>{
-
-      /* ★ 2. 送出成功：按鈕反白 → 改成關閉視窗 */
-      msg.textContent = "✅ 已送出！感謝填寫";
-      btnSend.disabled = false;
-      btnSend.style.background = "#fff";
-      btnSend.style.color      = "#000";
-      btnSend.innerText        = "點右上角X關閉並返回";
-      btnSend.onclick          = ()=> liff.closeWindow();   // 再按一次才關
-
-  }).catch(e=>{
+      msg.textContent="✅ 已送出！感謝填寫";
+      btnSend.disabled=false;
+      btnSend.style.background="#fff"; btnSend.style.color="#000";
+      btnSend.innerText="點右上角X關閉並返回";
+      btnSend.onclick=()=>liff.closeWindow();
+  }).catch(()=>{
       alert("送出失敗，請重試");
-      btnSend.disabled = false;
-      btnSend.innerText = "重新送出";
-      btnSend.style.background = "#ffc107";
+      btnSend.disabled=false; btnSend.innerText="重新送出"; btnSend.style.background="#ffc107";
   });
 };
-
 </script>
 </body></html>
-
