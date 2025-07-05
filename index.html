@@ -1,88 +1,87 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>轉轉小瑪莉</title>
-  <style>
-    body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei"; }
-    button { padding:20px; margin-top:20px; width:80%; font-size:1.5em; }
-    video { width:100%; max-width:400px; margin-top:20px; display:none; }
-    #result { margin-top:20px; font-size:2em; display:none; }
-    #form { display:none; margin-top:20px; }
-    input { font-size:1em; padding:10px; width:80%; margin:5px auto; display:block; }
-  </style>
-</head>
-<body>
-  <h1>🎉 轉轉小瑪莉 🎉</h1>
-  <button id="startBtn">開始抽獎</button>
-  <video id="drawVideo" playsinline>
-    <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
-  </video>
-  <div id="result"></div>
-  <div id="form">
-    <input id="name" placeholder="請輸入姓名">
-    <input id="phone" placeholder="請輸入電話">
-    <button id="sendBtn">送出資料</button>
-  </div>
-  <script>
-    const startBtn = document.getElementById("startBtn");
-    const video = document.getElementById("drawVideo");
-    const result = document.getElementById("result");
-    const form = document.getElementById("form");
-    const sendBtn = document.getElementById("sendBtn");
+<!DOCTYPE html><html lang="zh-Hant"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>轉轉小瑪莉</title>
+<style>
+  body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
+  h1{color:gold;margin:24px 0 12px}
+  #play,#submit{padding:14px 0;width:80%;font-size:1.1em;border:none;border-radius:8px}
+  #play{background:#28a745;color:#fff} #submit{background:#ffc107;color:#000;display:none}
+  video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
+  input{width:80%;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
+  #msg{margin:18px 0;font-size:1.4em;font-weight:bold}
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head><body>
+<h1>🎰 轉轉小瑪莉</h1>
+<button id="play" disabled>載入中…</button>
+<video id="mv" playsinline>
+  <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
+</video>
+<div id="msg"></div>
 
-    // 你的 Apps Script WebApp 部署網址
-    const appsScriptUrl = "https://script.google.com/macros/s/AKfycbx9e3IPpFgyvpVJ_1lYmuzTgC_12_9F2Jtsw3DKugqfpA4M41htb4V8V3xfjvg2bBuK/exec";
+<!-- 中獎表單 -->
+<div id="form" style="display:none">
+  <input id="username" placeholder="姓名"><br>
+  <input id="phone"   placeholder="手機"><br>
+  <button id="submit">送出</button>
+</div>
 
-    let userId = "testUser123";  // 先假設用戶id (可之後接LIFF)
+<script>
+const LIFF_ID = "1656871455-vE1ZZLJ7";
+const API     = "YOUR_NEW_EXEC_URL_HERE";  // <—— 換成剛部署的 /exec
 
-    startBtn.addEventListener("click", () => {
-      startBtn.style.display="none";
-      video.style.display="block";
-      video.currentTime=0;
-      video.play().catch(err => console.error("影片播放失敗", err));
-    });
+let uid="", uname="";
+const btnPlay  = document.getElementById("play");
+const mv       = document.getElementById("mv");
+const msg      = document.getElementById("msg");
+const formBox  = document.getElementById("form");
+const inName   = document.getElementById("username");
+const inPhone  = document.getElementById("phone");
+const btnSend  = document.getElementById("submit");
 
-    video.onended = () => {
-      const isWin = Math.random() < 0.5; // 50% 機率
-      video.style.display="none";
-      result.style.display="block";
-      if(isWin){
-        result.textContent="🎉 恭喜中獎！";
-        form.style.display="block";
-      }else{
-        result.textContent="😭 銘謝惠顧，再接再厲！";
-        startBtn.style.display="block";
-      }
-    }
+/* ---------- LIFF 初始化 ---------- */
+(async()=>{
+  await liff.init({liffId:LIFF_ID});
+  if(!liff.isLoggedIn()){ liff.login(); return; }
+  const p = await liff.getProfile();
+  uid = p.userId; uname = p.displayName;
+  btnPlay.disabled=false; btnPlay.textContent="開始遊戲";
+})();
 
-    sendBtn.addEventListener("click", () => {
-      const name = document.getElementById("name").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      if(!name || !phone){
-        alert("請輸入完整資料");
-        return;
-      }
-      sendBtn.disabled = true;
-      sendBtn.textContent = "送出中...";
+/* ---------- 遊戲流程 ---------- */
+btnPlay.onclick = ()=>{
+  btnPlay.style.display="none"; msg.textContent="";
+  mv.style.display="block"; mv.currentTime=0; mv.play();
+  setTimeout(()=>mv.pause(), 10000);            // 10 秒強制結束
+};
 
-      // 使用 GET 傳參數到 Apps Script
-      const url = `${appsScriptUrl}?userId=${encodeURIComponent(userId)}&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&prize=轉轉小瑪莉&date=${encodeURIComponent(new Date().toISOString())}`;
-      fetch(url)
-        .then(res => res.text())
-        .then(msg => {
-          alert("✅ 已送出，感謝您！");
-          form.style.display="none";
-          result.textContent = "🎉 請期待工作人員聯繫";
-        })
-        .catch(err => {
-          console.error("送出失敗", err);
-          alert("送出失敗，請稍後再試");
-          sendBtn.disabled = false;
-          sendBtn.textContent = "重新送出";
-        });
-    });
-  </script>
-</body>
-</html>
+mv.onpause = ()=>{                              // 影片結束
+  mv.style.display="none";
+  const win = Math.random()<0.5;
+  msg.textContent = win ? "🎊 恭喜中獎！" : "😭 再接再厲！";
+
+  fetch(API, {method:"POST",body:JSON.stringify({
+    act:"draw", userId:uid, displayName:uname, result:win?"WIN":"MISS"
+  })});
+
+  if(win){
+    formBox.style.display="block"; inName.value=uname;
+  }else{
+    btnPlay.style.display="block"; btnPlay.disabled=false;
+  }
+};
+
+/* ---------- 送出中獎資料 ---------- */
+btnSend.onclick = ()=>{
+  if(!inName.value || !inPhone.value){ alert("請填姓名與手機"); return; }
+  btnSend.disabled=true; btnSend.textContent="送出中…";
+
+  fetch(API,{method:"POST",body:JSON.stringify({
+    act:"winner", userId:uid, displayName:uname,
+    prize:"預設獎項", name:inName.value, phone:inPhone.value
+  })})
+  .then(()=>{ alert("已送出！"); liff.closeWindow(); })
+  .catch(err=>{ alert("失敗："+err.message); btnSend.disabled=false; });
+};
+</script>
+</body></html>
