@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>我的中獎紀錄</title>
+<style>
+  body{margin:0;background:#111;color:#fff;font-family:"Microsoft JhengHei";padding:14px}
+  h2{color:#ffd700;text-align:center;margin-bottom:20px}
+  .loading{text-align:center;color:#ffc107;margin:20px 0}
+  .error{text-align:center;color:#ff6b6b;margin:20px 0}
+  .card{background:#333;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 4px 8px rgba(0,0,0,.2);color:#ddd}
+  .card h3{margin:4px 0 8px;font-size:1.1em;color:#eee;border-bottom:1px solid #555;padding-bottom:8px}
+  .info-item{display:flex;justify-content:space-between;margin-bottom:6px;font-size:.95em}
+  .info-label{font-weight:bold;color:#ccc;margin-right:10px;flex-shrink:0}
+  .info-content{text-align:right;flex-grow:1}
+  .redeemBtn{margin-top:15px;width:100%;padding:12px;border:none;border-radius:8px;background:#ffc107;color:#000;font-size:1em;cursor:pointer;transition:background .3s}
+  .redeemBtn:hover:not(:disabled){background:#e0a800}
+  .redeemBtn.done{background:#666;color:#bbb;cursor:not-allowed}
+  .redeemBtn:disabled{opacity:0.7}
+  p{text-align:center;color:#aaa;margin-top:20px}
+  .refresh-btn{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    background:#28a745;
+    color:#fff;
+    border:none;
+    border-radius:50%;
+    width:50px;
+    height:50px;
+    font-size:1.2em;
+    cursor:pointer;
+    box-shadow:0 2px 10px rgba(0,0,0,.3);
+    z-index:1000;
+  }
+  .refresh-btn:hover{background:#218838}
+  .back-btn{
+    position:fixed;
+    top:20px;
+    left:20px;
+    background:#007bff;
+    color:#fff;
+    border:none;
+    border-radius:20px;
+    padding:8px 16px;
+    font-size:0.9em;
+    cursor:pointer;
+    z-index:1000;
+  }
+  .back-btn:hover{background:#0056b3}
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+<button class="back-btn" onclick="goBack()">← 返回遊戲</button>
+<h2>🎁 我的中獎紀錄</h2>
+<div id="list"><div class="loading">載入中...</div></div>
+<button class="refresh-btn" onclick="loadRecords()" title="重新載入">🔄</button>
+
+<script>
+const LIFF_ID = "1656871455-vE1ZZLJ7";
+const API = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // 請替換成您的 Apps Script 部署網址
+
+let currentUserId = '';
+
+/* ---------- 改進的 API 請求函式 ---------- */
+async function apiRequest(data) {
+  try {
+    // 使用 fetch 並正確處理 CORS
+    const response = await fetch(API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      mode: "cors"  // 明確指定 CORS 模式
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: 伺服器錯誤`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.status === 'err') {
+      throw new Error(result.message || '伺服器錯誤');
+    }
+    
+    return result.data;
+  } catch (error) {
+    console.error('API 請求失敗:', error);
+    
+    // 如果是 CORS 或網路錯誤，提供更友善的錯誤訊息
+    if (error.name === 'TypeError' || error.message.includes('CORS')) {
+      throw new Error('網路連線問題，請檢查網路狀態');
+    }
+    
+    throw error;
+  }
+}
+
+/* ---------- 初始化 ---------- */
+(async () => {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+    
+    const profile = await liff.getProfile();
+    currentUserId = profile.userId;
+    
+    await loadRecords();
+    
+  } catch (error) {
+    console.error('初始化失敗:', error);
+    showError('載入失敗，請重新整理頁面');
+  }
+})();
+
+/* ---------- 載入紀錄 ---------- */
+async function loadRecords() {
+  if (!currentUserId) {
+    showError('使用者資訊未載入');
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    const records = await apiRequest({
+      act: 'query',
+      userId: currentUserId
+    });
+    
+    renderRecords(records);
+    
+  } catch (error) {
+    console.error('載入紀錄失敗:', error);
+    showError('載入紀錄失敗: ' + error.message);
+  }
+}
+
+/* ---------- 顯示狀態 ---------- */
+function showLoading() {
+  document.getElementById('list').innerHTML = '<div class="loading">載入中...</div>';
+}
+
+function showError(message) {
+  document.getElementById('list').innerHTML = `<div class="error">❌ ${message}<br><button onclick="loadRecords()" style="margin-top:10px;padding:8px 16px;background:#ffc107;border:none;border-radius:5px;cursor:pointer;">重試</button></div>`;
+}
+
+/* ---------- 渲染紀錄 ---------- */
+function renderRecords(records) {
+  const listElement = document.getElementById('list');
+  
+  if (!records || records.length === 0) {
+    listElement.innerHTML = '<p>尚無中獎紀錄</p>';
+    return;
+  }
+  
+  listElement.innerHTML = records.map(record => `
+    <div class="card" id="card${record.row}">
+      <h3>${escapeHtml(record.lineName)}</h3>
+      <div class="info">
+        <div class="info-item">
+          <span class="info-label">中獎時間:</span>
+          <span class="info-content">${formatDateTime(record.winTime)}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">遊戲名稱:</span>
+          <span class="info-content">${escapeHtml(record.game)}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">優惠內容:</span>
+          <span class="info-content">${escapeHtml(record.prize)}</span>
+        </div>
+      </div>
+      ${record.isRedeem ? 
+        `<button class="redeemBtn done" disabled>已核銷<br>${formatDateTime(record.redeemTime)}</button>` :
+        `<button class="redeemBtn" onclick="redeem(${record.row}, this)">核銷</button>`
+      }
+    </div>
+  `).join('');
+}
+
+/* ---------- 核銷功能 ---------- */
+async function redeem(row, button) {
+  if (!row || !button) {
+    alert('系統錯誤，請重新整理頁面');
+    return;
+  }
+  
+  if (!confirm('確定要核銷此優惠券嗎？核銷後無法復原。')) {
+    return;
+  }
+  
+  button.disabled = true;
+  button.textContent = "處理中…";
+  button.style.background = "#555";
+  
+  try {
+    const result = await apiRequest({
+      act: 'redeem',
+      row: row
+    });
+    
+    button.className = "redeemBtn done";
+    button.innerHTML = `已核銷<br>${formatDateTime(result)}`;
+    
+    showToast('核銷成功！');
+    
+  } catch (error) {
+    console.error('核銷失敗:', error);
+    
+    button.disabled = false;
+    button.textContent = "核銷";
+    button.style.background = "#ffc107";
+    
+    alert("核銷失敗：" + error.message);
+  }
+}
+
+/* ---------- 返回遊戲 ---------- */
+function goBack() {
+  // 如果是在 LINE 中，可以導航到遊戲頁面
+  if (liff.isInClient()) {
+    // 假設您的遊戲頁面是 index.html
+    window.location.href = 'index.html';
+  } else {
+    // 在瀏覽器中，使用 history.back()
+    window.history.back();
+  }
+}
+
+/* ---------- 工具函式 ---------- */
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatDateTime(dateTime) {
+  if (!dateTime) return '';
+  
+  try {
+    const date = new Date(dateTime);
+    if (isNaN(date.getTime())) return dateTime;
+    
+    return date.toLocaleString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch (error) {
+    return dateTime;
+  }
+}
+
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 1001;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+  }, 3000);
+}
+
+/* ---------- 錯誤處理 ---------- */
+window.addEventListener('error', (event) => {
+  console.error('全域錯誤:', event.error);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('未處理的 Promise 拒絕:', event.reason);
+});
+</script>
+</body>
+</html>
