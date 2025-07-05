@@ -52,7 +52,7 @@ const btnSend  = document.getElementById("submit");
 btnPlay.onclick = ()=>{
   btnPlay.style.display="none"; msg.textContent="";
   mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(), 10000);            // 10 秒強制結束
+  setTimeout(()=>mv.pause(), 1000);            // 10 秒強制結束
 };
 
 mv.onpause = ()=>{                              // 影片結束
