@@ -9,7 +9,7 @@
     display:block;
     width:80%;max-width:320px;
     margin:12px auto 0;          /* auto ＝ 完全水平置中 */
-    padding:14px 0;
+    padding:30px 0;
     font-size:1.1em;
     background:#ffc107;
     color:#000;border:none;border-radius:8px;
@@ -106,7 +106,7 @@ btnSend.onclick = ()=>{
       btnSend.disabled = false;
       btnSend.style.background = "#fff";
       btnSend.style.color      = "#000";
-      btnSend.innerText        = "關閉並返回";
+      btnSend.innerText        = "點右上方X關閉並返回";
       btnSend.onclick          = ()=> liff.closeWindow();   // 再按一次才關
 
   }).catch(e=>{
