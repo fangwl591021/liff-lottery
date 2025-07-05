@@ -1,25 +1,31 @@
-<!DOCTYPE html><html lang="zh-Hant"><head>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>轉轉小瑪莉</title>
 <style>
- body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
- h1{color:gold;margin:24px 0 12px}
- #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px}
- #play{background:#28a745;color:#fff} #submit{background:#ffc107;color:#000;display:none}
- <!-- ★ 1. 只改這 1 行 CSS，讓外層寬度 100% 就能完全置中 -->
-#wrapSubmit{display:flex;justify-content:center}  /* ←外層置中 */
- video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
- input{width:80%;max-width:320px;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
- #msg{margin:18px 0 8px;font-size:1.4em;font-weight:bold}
+  body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
+  h1{color:gold;margin:24px 0 12px}
+  #play,#submit{
+      display:block;width:80%;max-width:320px;margin:12px auto 0;
+      padding:30px 0;font-size:1.1em;border:none;border-radius:8px
+  }
+  #play{background:#28a745;color:#fff}
+  #submit{background:#ffc107;color:#000;display:none}
+  #wrapSubmit{display:flex;justify-content:center}
+  video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
+  input{width:80%;max-width:320px;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
+  #msg{margin:18px 0 8px;font-size:1.4em;font-weight:bold}
 </style>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head><body>
+
 <h1>🎰 轉轉小瑪莉</h1>
 <button id="play" disabled>載入中…</button>
 
 <video id="mv" playsinline>
- <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
+  <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
 </video>
 
 <div id="msg"></div>
@@ -33,125 +39,102 @@
 <audio id="winSound" src="https://files.freemusicarchive.org/storage-freemusicarchive-org/music/Creative_Commons/KieLoKaz/Free_Sound_Effects/KieLoKaz_-_Clap.mp3"></audio>
 
 <script>
-const LIFF_ID="1656871455-vE1ZZLJ7";
-const API    ="https://script.google.com/macros/s/AKfycbwo16CQ7owssJrivxWEKmTj9pags88jGdP-bK0_8gscPTWzqHYdoqAyXVb-KK1QVphW/exec";
-const SHEET_ID       = '1IhVlMOpwdk66R7a1sFfyqUzJWcHyZrUNKR09BxdFkFY'; // ← 換成你的
-const DRAW_LOG_SHEET = '抽獎紀錄表';
-const WINNER_SHEET   = '中獎紀錄表';
+const LIFF_ID = "1656871455-vE1ZZLJ7";
+const API     = "https://script.google.com/macros/s/AKfycbwo16CQ7owssJrivxWEKmTj9pags88jGdP-bK0_8gscPTWzqHYdoqAyXVb-KK1QVphW/exec";
 
-/*--------------  主入口 (只收 POST) --------------*/
-function doPost(e){
-  const body = JSON.parse(e.postData.contents || '{}');
-  switch(body.act){
-    case 'draw'  : logDraw  (body); break;
-    case 'winner': logWinner(body); break;
-    default      : return reply({error:'unknown act'});
-  }
-  return reply({ok:true});
-}
+let uid="", uname="";
+const btnPlay = document.getElementById("play"),
+      mv      = document.getElementById("mv"),
+      msg     = document.getElementById("msg"),
+      form    = document.getElementById("form"),
+      inName  = document.getElementById("username"),
+      inPhone = document.getElementById("phone"),
+      btnSend = document.getElementById("submit"),
+      winSound= document.getElementById("winSound");
 
-/*--------------  資料寫入 --------------*/
-function logDraw({userId='',displayName='',result=''}) {
-  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DRAW_LOG_SHEET);
-  sh.appendRow([userId, displayName, result, now()]);
-}
-function logWinner({userId='',displayName='',prize='',name='',phone=''}) {
-  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(WINNER_SHEET);
-  sh.appendRow([
-    userId,                      // A  LINE ID
-    displayName,                 // B  LINE名稱
-    '轉轉小瑪莉',                // C  遊戲名稱
-    prize,                       // D  中獎券
-    name,                        // E  姓名
-    phone,                       // F  電話
-    now(),                       // G  中獎時間
-    Utilities.formatDate(new Date(),'Asia/Taipei','yyyy-MM-dd') // H 抽獎日期
-  ]);
-}
-
-/*--------------  共用小工具 --------------*/
-function now(){
-  return Utilities.formatDate(new Date(),'Asia/Taipei','yyyy-MM-dd HH:mm:ss');
-}
-function reply(obj){
-  return ContentService
-          .createTextOutput(JSON.stringify(obj))
-          .setMimeType(ContentService.MimeType.JSON);
-}
-";
-
-let uid="",uname="";
-const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
-      msg=document.getElementById("msg"), form=document.getElementById("form"),
-      inName=document.getElementById("username"), inPhone=document.getElementById("phone"),
-      btnSend=document.getElementById("submit"), winSound=document.getElementById("winSound");
-
-/* --- LIFF init --- */
-(async()=>{
-  await liff.init({liffId:LIFF_ID});
-  if(!liff.isLoggedIn()){ liff.login();return; }
-  const p=await liff.getProfile(); uid=p.userId; uname=p.displayName;
-  btnPlay.disabled=false; btnPlay.textContent="開始遊戲";
+/* ---------- LIFF 初始化 ---------- */
+(async () => {
+  await liff.init({ liffId: LIFF_ID });
+  if (!liff.isLoggedIn()) { liff.login(); return; }
+  const p = await liff.getProfile();
+  uid = p.userId; uname = p.displayName;
+  btnPlay.disabled = false;
+  btnPlay.textContent = "開始遊戲";
 })();
 
-/* --- play --- */
-btnPlay.onclick=()=>{
-  btnPlay.style.display="none"; msg.textContent="";
-  mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(),10000);               // 10s 保險
+/* ---------- 遊戲 ---------- */
+btnPlay.onclick = () => {
+  btnPlay.style.display = "none";
+  msg.textContent = "";
+  mv.style.display = "block";
+  mv.currentTime = 0;
+  mv.play();
+  setTimeout(() => mv.pause(), 10000);          // 最大 10 秒
 };
 
-mv.onpause=()=>{
-  mv.style.display="none";
-  const win=Math.random()<0.5;
-  msg.textContent=win?"🎊 恭喜中獎！":"😭 再接再厲！";
+mv.onpause = () => {
+  mv.style.display = "none";
+  const win = Math.random() < 0.5;
+  msg.textContent = win ? "🎊 恭喜中獎！" : "😭 再接再厲！";
 
-  fetch(API,{method:"POST",mode:"no-cors",
-    headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
+  fetch(API, {                     // 紀錄抽獎
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      act: "draw",
+      userId: uid,
+      displayName: uname,
+      result: win ? "WIN" : "MISS"
+    })
   });
 
-  if(win){
-    winSound.currentTime=0; winSound.play().catch(()=>{});
-    form.style.display="block"; inName.value=uname; btnSend.style.display="block";
-  }else{ btnPlay.style.display="block"; btnPlay.disabled=false; }
+  if (win) {
+    winSound.currentTime = 0;
+    winSound.play().catch(()=>{});
+    form.style.display = "block";
+    inName.value = uname;
+    btnSend.style.display = "block";
+  } else {
+    btnPlay.style.display = "block";
+    btnPlay.disabled = false;
+  }
 };
 
-/* --- send winner --- */
-/* --- send winner --- */
-btnSend.onclick = ()=>{
-  if(!inName.value.trim() || !inPhone.value.trim()){
-      alert("請填姓名與手機");return;
+/* ---------- 送出中獎資料 ---------- */
+btnSend.onclick = () => {
+  if (!inName.value.trim() || !inPhone.value.trim()) {
+    alert("請填姓名與手機"); return;
   }
   btnSend.disabled = true;
   btnSend.innerText = "送出中…";
   btnSend.style.background = "#555";
 
-  fetch(API,{
-    method:"POST",mode:"no-cors",
-    headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({
-      act:"winner", userId:uid, displayName:uname,
-      prize:"預設獎項",
-      name:inName.value.trim(), phone:inPhone.value.trim()
+  fetch(API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      act:  "winner",
+      userId: uid,
+      displayName: uname,
+      prize: "預設獎項",
+      name:  inName.value.trim(),
+      phone: inPhone.value.trim()
     })
-  }).then(()=>{
-
-      /* ★ 2. 送出成功：按鈕反白 → 改成關閉視窗 */
-      msg.textContent = "✅ 已送出！感謝填寫";
-      btnSend.disabled = false;
-      btnSend.style.background = "#fff";
-      btnSend.style.color      = "#000";
-      btnSend.innerText        = "關閉並返回";
-      btnSend.onclick          = ()=> liff.closeWindow();   // 再按一次才關
-
-  }).catch(e=>{
-      alert("送出失敗，請重試");
-      btnSend.disabled = false;
-      btnSend.innerText = "重新送出";
-      btnSend.style.background = "#ffc107";
+  })
+  .then(() => {
+    msg.textContent = "✅ 已送出！感謝填寫";
+    btnSend.disabled  = false;
+    btnSend.style.background = "#fff";
+    btnSend.style.color      = "#000";
+    btnSend.innerText        = "關閉並返回";
+    btnSend.onclick          = () => liff.closeWindow();
+  })
+  .catch(() => {
+    alert("送出失敗，請重試");
+    btnSend.disabled = false;
+    btnSend.innerText = "重新送出";
+    btnSend.style.background = "#ffc107";
   });
 };
-
 </script>
 </body></html>
