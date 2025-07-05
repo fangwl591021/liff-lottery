@@ -1,132 +1,112 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>我的中獎紀錄</title>
-<style>
-  body{margin:0;background:#111;color:#fff;font-family:"Microsoft JhengHei";padding:14px}
-  h2{color:#ffd700;text-align:center;margin-bottom:20px}
-  .loading{text-align:center;color:#ffc107;margin:20px 0}
-  .error{text-align:center;color:#ff6b6b;margin:20px 0}
-  .card{background:#333;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 4px 8px rgba(0,0,0,.2);color:#ddd}
-  .card h3{margin:4px 0 8px;font-size:1.1em;color:#eee;border-bottom:1px solid #555;padding-bottom:8px}
-  .info-item{display:flex;justify-content:space-between;margin-bottom:6px;font-size:.95em}
-  .info-label{font-weight:bold;color:#ccc;margin-right:10px;flex-shrink:0}
-  .info-content{text-align:right;flex-grow:1}
-  .redeemBtn{margin-top:15px;width:100%;padding:12px;border:none;border-radius:8px;background:#ffc107;color:#000;font-size:1em;cursor:pointer;transition:background .3s}
-  .redeemBtn:hover:not(:disabled){background:#e0a800}
-  .redeemBtn.done{background:#666;color:#bbb;cursor:not-allowed}
-  .redeemBtn:disabled{opacity:0.7}
-  p{text-align:center;color:#aaa;margin-top:20px}
-  .back-btn{position:fixed;top:20px;left:20px;background:#007bff;color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:.9em;cursor:pointer;z-index:1000}
-  .back-btn:hover{background:#0056b3}
-</style>
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>我的中獎紀錄</title>
+  <style>
+    body { margin:0; background:#111; color:#fff; font-family:"Microsoft JhengHei"; padding:16px; }
+    h2 { text-align:center; color:#ffd700; margin-bottom:16px; }
+    .loading, .error { text-align:center; margin:20px 0; color:#ccc; }
+    .card { background:#333; padding:12px; margin:12px 0; border-radius:8px; }
+    .card h3 { margin:0 0 8px; color:#fff; }
+    .info { font-size:.9em; line-height:1.4; }
+    .redeemBtn { width:100%; padding:10px; margin-top:8px; border:none; border-radius:6px;
+                 background:#ffc107; color:#000; font-size:1em; }
+    .redeemBtn.done { background:#666; color:#bbb; cursor:not-allowed; }
+    .back { position:fixed; top:12px; left:12px; background:#007bff; color:#fff;
+            border:none; padding:8px 12px; border-radius:5px; }
+  </style>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
+  <button class="back" onclick="history.back()">← 返回</button>
+  <h2>🎁 我的中獎紀錄</h2>
+  <div id="list"><div class="loading">載入中…</div></div>
 
-<button class="back-btn" onclick="goBack()">← 返回遊戲</button>
-<h2>🎁 我的中獎紀錄</h2>
-<div id="list"><div class="loading">載入中...</div></div>
+  <script>
+    const LIFF_ID = '1656871455-1R577Ndy';
+    const API     = 'https://script.google.com/macros/s/AKfycbymb35gfN8YGpCB6HUZYYYSYA255COzkIz0P1VLy7GLZjHG01OtoB1E5uw_cgJUcz0/exec';
 
-<script>
-/* —— 改成你自己的 LIFF_ID & Apps Script URL —— */
-const LIFF_ID = "1656871455-1R577Ndy";
-// 一定要換成你部署後的那串 /exec URL
-const API     = "https://script.google.com/macros/s/AKfycbymb35gfN8YGpCB6HUZYYYSYA255COzkIz0P1VLy7GLZjHG01OtoB1E5uw_cgJUcz0/exec";
-
-let currentUserId = '';
-
-const $ = s => document.querySelector(s);
-
-async function apiRequest(payload) {
-  const res = await fetch(API, {
-    method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const j = await res.json();
-  if (j.status !== 'ok') throw new Error(j.message||'Server error');
-  return j.data;
-}
-
-;(async()=>{
-  try {
-    await liff.init({ liffId: LIFF_ID });
-    if (!liff.isLoggedIn()) { liff.login(); return; }
-    currentUserId = (await liff.getProfile()).userId;
-    loadRecords();
-  } catch(e) {
-    showError("初始化失敗");
-    console.error(e);
-  }
-})();
-
-function showLoading() {
-  $("#list").innerHTML = `<div class="loading">載入中...</div>`;
-}
-function showError(msg) {
-  $("#list").innerHTML = `<div class="error">❌ ${msg}</div>`;
-}
-
-async function loadRecords(){
-  showLoading();
-  try {
-    const recs = await apiRequest({ act:'query', userId: currentUserId });
-    renderRecords(recs);
-  } catch(e) {
-    showError("載入失敗，請稍後再試");
-    console.error(e);
-  }
-}
-
-function renderRecords(arr){
-  if (!arr.length) {
-    $("#list").innerHTML = `<p>尚無中獎紀錄</p>`;
-    return;
-  }
-  $("#list").innerHTML = arr.map(o=>`
-    <div class="card" id="c${o.row}">
-      <h3>${escapeHtml(o.lineName)}</h3>
-      <div class="info-item"><span class="info-label">中獎時間:</span><span class="info-content">${escapeHtml(o.winTime)}</span></div>
-      <div class="info-item"><span class="info-label">遊戲名稱:</span><span class="info-content">${escapeHtml(o.game)}</span></div>
-      <div class="info-item"><span class="info-label">優惠內容:</span><span class="info-content">${escapeHtml(o.prize)}</span></div>
-      ${o.isRedeem
-        ? `<button class="redeemBtn done" disabled>已核銷<br>${escapeHtml(o.redeemTime)}</button>`
-        : `<button class="redeemBtn" onclick="redeem(${o.row}, this)">核銷</button>`
+    async function init() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) return liff.login();
+        const uid = (await liff.getProfile()).userId;
+        loadRecords(uid);
+      } catch (e) {
+        showError('LIFF 初始化失敗');
+        console.error(e);
       }
-    </div>
-  `).join('');
-}
+    }
 
-async function redeem(row, btn){
-  btn.disabled = true;
-  btn.textContent = "處理中…";
-  try {
-    const t = await apiRequest({ act:'redeem', row });
-    btn.className = "redeemBtn done";
-    btn.innerHTML = `已核銷<br>${escapeHtml(t)}`;
-  } catch(e) {
-    alert("核銷失敗");
-    console.error(e);
-    btn.disabled = false;
-    btn.textContent = "核銷";
-  }
-}
+    async function loadRecords(userId) {
+      const list = document.getElementById('list');
+      list.innerHTML = '<div class="loading">載入中…</div>';
+      try {
+        const res = await fetch(API, {
+          method: 'POST',
+          mode:   'cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ act:'query', userId })
+        });
+        if (!res.ok) throw new Error(res.status);
+        const json = await res.json();
+        if (json.status !== 'ok') throw new Error(json.message||'後端回傳錯誤');
+        render(json.data);
+      } catch (e) {
+        showError('載入失敗：' + e.message);
+        console.error(e);
+      }
+    }
 
-function goBack(){
-  // 在 LINE 裡面回去遊戲網址
-  liff.openWindow({ url: 'https://fangwl591021.github.io/liff-lottery/index.html', external: false });
-}
+    function render(arr) {
+      const list = document.getElementById('list');
+      if (!arr || arr.length===0) {
+        list.innerHTML = '<p class="loading">尚無中獎紀錄</p>';
+        return;
+      }
+      list.innerHTML = arr.map(o => `
+        <div class="card" id="c${o.row}">
+          <h3>${o.lineName}</h3>
+          <div class="info">
+            中獎時間：${o.winTime}<br>
+            遊戲名稱：${o.game}<br>
+            優惠內容：${o.prize}
+          </div>
+          ${o.isRedeem
+            ? `<button class="redeemBtn done" disabled>已核銷<br>${o.redeemTime}</button>`
+            : `<button class="redeemBtn" onclick="redeem(${o.row}, this)">核銷</button>`}
+        </div>`).join('');
+    }
 
-function escapeHtml(str){
-  const d = document.createElement('div');
-  d.textContent = str; return d.innerHTML;
-}
-</script>
+    async function redeem(row, btn) {
+      btn.disabled = true;
+      btn.textContent = '處理中…';
+      try {
+        const res = await fetch(API, {
+          method: 'POST',
+          mode:   'cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ act:'redeem', row })
+        });
+        const j = await res.json();
+        if (j.status!=='ok') throw new Error(j.message||'核銷錯誤');
+        btn.className = 'redeemBtn done';
+        btn.innerHTML = `已核銷<br>${j.data}`;
+      } catch (e) {
+        alert('核銷失敗：' + e.message);
+        console.error(e);
+        btn.disabled = false;
+        btn.textContent = '核銷';
+      }
+    }
 
+    function showError(msg) {
+      document.getElementById('list').innerHTML = `<div class="error">${msg}</div>`;
+    }
+
+    init();
+  </script>
 </body>
 </html>
