@@ -5,15 +5,7 @@
 <style>
  body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
  h1{color:gold;margin:24px 0 12px}
- #play,#submit{
-    display:block;
-    width:80%;max-width:320px;
-    margin:12px auto 0;          /* auto ＝ 完全水平置中 */
-    padding:30px 0;
-    font-size:1.1em;
-    background:#ffc107;
-    color:#000;border:none;border-radius:8px;
-  }
+ #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px}
  #play{background:#28a745;color:#fff} #submit{background:#ffc107;color:#000;display:none}
  <!-- ★ 1. 只改這 1 行 CSS，讓外層寬度 100% 就能完全置中 -->
 #wrapSubmit{display:flex;justify-content:center}  /* ←外層置中 */
@@ -42,7 +34,7 @@
 
 <script>
 const LIFF_ID="1656871455-vE1ZZLJ7";
-const API    ="https://script.google.com/macros/s/AKfycbzzQLGtPmO-2aD-DSThpVvO7p-Rj4bih3pUVxoYIYhG7HIeRadhqesCzrFCfky_XBOx/exec";
+const API    ="https://script.google.com/macros/s/AKfycbz5BN_n2nlKNduRax7CsQjhZOWFBYaOSeCML8iKNtpJzpHmAC2LpXuhNn3coALL7HRv/exec";
 
 let uid="",uname="";
 const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
@@ -62,7 +54,7 @@ const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
 btnPlay.onclick=()=>{
   btnPlay.style.display="none"; msg.textContent="";
   mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(),7000);               // 10s 保險
+  setTimeout(()=>mv.pause(),10000);               // 10s 保險
 };
 
 mv.onpause=()=>{
@@ -106,7 +98,7 @@ btnSend.onclick = ()=>{
       btnSend.disabled = false;
       btnSend.style.background = "#fff";
       btnSend.style.color      = "#000";
-      btnSend.innerText        = "點右上方X關閉並返回";
+      btnSend.innerText        = "關閉並返回";
       btnSend.onclick          = ()=> liff.closeWindow();   // 再按一次才關
 
   }).catch(e=>{
