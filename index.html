@@ -1,99 +1,20 @@
-<!DOCTYPE html><html lang="zh-Hant"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>轉轉小瑪莉</title>
-<style>
-  body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
-  h1{color:gold;margin:24px 0 12px}
-  #play,#submit{padding:14px 0;width:80%;font-size:1.1em;border:none;border-radius:8px}
-  #play{background:#28a745;color:#fff}
-  #submit{background:#ffc107;color:#000;display:none}
-  video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
-  input{width:80%;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
-  #msg{margin:18px 0;font-size:1.4em;font-weight:bold}
-</style>
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-</head><body>
-<h1>🎰 轉轉小瑪莉</h1>
-<button id="play" disabled>載入中…</button>
-<video id="mv" playsinline>
-  <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
-</video>
-<div id="msg"></div>
-
-<div id="form" style="display:none">
-  <input id="username" placeholder="姓名"><br>
-  <input id="phone"   placeholder="手機"><br>
-  <button id="submit">送出</button>
-</div>
-
 <script>
 const LIFF_ID = "1656871455-vE1ZZLJ7";
-const API     = "https://script.google.com/macros/s/AKfycbylQMEiD-UifV9oXlzznCN3wl9N_0vGoJCbOJyMhy0l0BiEgbcYDaJ9q_dyqIN841Q/exec";
+const API     = "https://script.google.com/macros/s/AKfycbwxw-dfO8ZIwxYIm0lAirQmH0E7rQWwCqqwWSyekyROLdNGB-klsxpC7uAGmZ5_MeKj/exec";
 
-let uid="", uname="";
-const btnPlay  = document.getElementById("play");
-const mv       = document.getElementById("mv");
-const msg      = document.getElementById("msg");
-const formBox  = document.getElementById("form");
-const inName   = document.getElementById("username");
-const inPhone  = document.getElementById("phone");
-const btnSend  = document.getElementById("submit");
-
-/* ---------- LIFF ---------- */
-(async()=>{
-  await liff.init({liffId:LIFF_ID});
-  if(!liff.isLoggedIn()){ liff.login(); return; }
-  const p = await liff.getProfile();
-  uid = p.userId; uname = p.displayName;
-  btnPlay.disabled=false; btnPlay.textContent="開始遊戲";
-})();
-
-/* ---------- 遊戲 ---------- */
-btnPlay.onclick = ()=>{
-  btnPlay.style.display="none"; msg.textContent="";
-  mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(), 700000);   // 10 秒
-};
-
-mv.onpause = ()=>{
-  mv.style.display="none";
-  const win = Math.random()<0.5;
-  msg.textContent = win ? "🎊 恭喜中獎！" : "😭 再接再厲！";
-
-  fetch(API,{
-  method : "POST",
-  mode   : "no-cors",
-- headers: {"Content-Type":"application/json"},
-- body   : JSON.stringify({...})
-+ headers: {"Content-Type":"text/plain"}, // <= 簡單請求
-+ body   : JSON.stringify({...})         // 內容不變
-});
-
-
-  if(win){
-    formBox.style.display = "block";
-    inName.value = uname;
-    btnSend.style.display = "block";
-  }else{
-    btnPlay.style.display="block"; btnPlay.disabled=false;
-  }
-};
-
-/* ---------- 送出表單 ---------- */
-btnSend.onclick = ()=>{
-  if(!inName.value || !inPhone.value){ alert("請填姓名與手機"); return; }
-  btnSend.disabled=true; btnSend.textContent="送出中…";
-
-  fetch(API,{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      act:"winner", userId:uid, displayName:uname,
-      prize:"預設獎項", name:inName.value, phone:inPhone.value
-    })
+…
+fetch(API,{
+  method:"POST",
+  mode  :"no-cors",
+  headers:{ "Content-Type":"text/plain" },
+  body:JSON.stringify({
+    act :"winner",
+    userId,
+    displayName:uname,
+    prize:"預設獎項",
+    name:inName.value,
+    phone:inPhone.value
   })
-  .then(()=>{ alert("已送出！"); liff.closeWindow(); })
-  .catch(err=>{ alert("失敗："+err.message); btnSend.disabled=false; });
-};
+})
+.then(()=>liff.closeWindow());
 </script>
-</body></html>
