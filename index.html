@@ -72,9 +72,9 @@ const loseSound = document.getElementById("loseSound");
   const p = await liff.getProfile();
   uid   = p.userId;
   uname = p.displayName;
+
   btnPlay.disabled = false;
   btnPlay.textContent = "開始遊戲";
-  
 })();
 
 /* ------------- 遊戲流程 ------------- */
@@ -153,3 +153,4 @@ btnSend.onclick = () => {
 </script>
 </body>
 </html>
+
