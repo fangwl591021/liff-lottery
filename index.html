@@ -5,11 +5,8 @@
 <style>
  body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
  h1{color:gold;margin:24px 0 12px}
- #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px;transition:.2s}
- #play{background:#28a745;color:#fff}
- #submit{background:#ffc107;color:#000;display:none}
- #submit[disabled]{background:#555;color:#ccc}
- #wrapSubmit{display:flex;justify-content:center}
+ #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px}
+ #play{background:#28a745;color:#fff} #submit{background:#ffc107;color:#000;display:none}
  video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
  input{width:80%;max-width:320px;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
  #msg{margin:18px 0 8px;font-size:1.4em;font-weight:bold}
@@ -17,111 +14,95 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head><body>
 <h1>🎰 轉轉小瑪莉</h1>
-
 <button id="play" disabled>載入中…</button>
 
 <video id="mv" playsinline>
-  <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
+ <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
 </video>
 
 <div id="msg"></div>
 
+<!-- 中獎表單 -->
 <div id="form" style="display:none">
   <input id="username" placeholder="姓名"><br>
   <input id="phone"   placeholder="手機"><br>
-  <div id="wrapSubmit"><button id="submit">送出</button></div>
+  <button id="submit">送出</button>
 </div>
 
 <audio id="winSound" src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
 
 <script>
-/* 基本設定 ---------------------------------------------------- */
 const LIFF_ID="1656871455-vE1ZZLJ7";
 const API    ="https://script.google.com/macros/s/AKfycbz5BN_n2nlKNduRax7CsQjhZOWFBYaOSeCML8iKNtpJzpHmAC2LpXuhNn3coALL7HRv/exec";
 
-/* DOM 變數 ---------------------------------------------------- */
-const btnPlay=document.getElementById("play"),
-      mv      =document.getElementById("mv"),
-      msg     =document.getElementById("msg"),
-      formBox =document.getElementById("form"),
-      inName  =document.getElementById("username"),
-      inPhone =document.getElementById("phone"),
-      btnSend =document.getElementById("submit"),
-      winSound=document.getElementById("winSound");
+let uid="",uname="";
+const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
+      msg=document.getElementById("msg"), form=document.getElementById("form"),
+      inName=document.getElementById("username"), inPhone=document.getElementById("phone"),
+      btnSend=document.getElementById("submit"), winSound=document.getElementById("winSound");
 
-let uid="", uname="";
-
-/* ---------- LIFF 初始化 ---------- */
+/* --- LIFF init --- */
 (async()=>{
   await liff.init({liffId:LIFF_ID});
-  if(!liff.isLoggedIn()){ liff.login(); return; }
-
-  const p = await liff.getProfile();
-  uid=p.userId; uname=p.displayName;
-
-  /* 為了讓音樂之後能自動播放，先在同一手勢內觸發一次 play+pause */
-  btnPlay.addEventListener("click", ()=>{ winSound.play().then(()=>winSound.pause()); }, {once:true});
-
+  if(!liff.isLoggedIn()){ liff.login();return; }
+  const p=await liff.getProfile(); uid=p.userId; uname=p.displayName;
   btnPlay.disabled=false; btnPlay.textContent="開始遊戲";
 })();
 
-/* ---------- 開始遊戲 ---------- */
+/* --- play --- */
 btnPlay.onclick=()=>{
   btnPlay.style.display="none"; msg.textContent="";
   mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(),10000);          // 10 秒保險
+  setTimeout(()=>mv.pause(),10000);               // 10s 保險
 };
 
-/* ---------- 影片結束 ---------- */
-mv.onpause=()=>{
+mv.onpause=()=>{                                  // 影片結束
   mv.style.display="none";
   const win=Math.random()<0.5;
   msg.textContent=win?"🎊 恭喜中獎！":"😭 再接再厲！";
 
-  fetch(API,{
+  fetch(`${API}?act=draw`,{                       // <— act 放 URL
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
+    mode:"no-cors",
+    body:JSON.stringify({userId:uid,displayName:uname,result:win?"WIN":"MISS"})
   });
 
   if(win){
     winSound.currentTime=0; winSound.play().catch(()=>{});
-    formBox.style.display="block";
-    inName.value=uname;
-    btnSend.style.display="block";
+    form.style.display="block";
+    inName.value=uname; btnSend.style.display="block";
   }else{
     btnPlay.style.display="block"; btnPlay.disabled=false;
   }
 };
 
-/* ---------- 送出得獎者資料 ---------- */
+/* --- send winner --- */
 btnSend.onclick=()=>{
-  if(!inName.value.trim()||!inPhone.value.trim()){
-    alert("請填姓名與手機"); return;
+  if(!inName.value.trim() || !inPhone.value.trim()){
+    alert("請填姓名與手機");return;
   }
+  // 1. 立即鎖住
+  btnSend.disabled=true; btnSend.style.background="#555"; btnSend.innerText="送出中…";
 
-  // 立即鎖定按鈕
-  btnSend.disabled=true; btnSend.innerText="送出中…";
-
-  fetch(API,{
+  fetch(`${API}?act=winner`,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
+    mode:"no-cors",
     body:JSON.stringify({
-      act:"winner",
-      userId:uid, displayName:uname,
+      userId:uid,displayName:uname,
       prize:"預設獎項",
       name:inName.value.trim(),
       phone:inPhone.value.trim()
     })
   })
-  .then(r=>r.json())
-  .then(res=>{
-      if(res.status==="ok"){ alert("✅ 已送出！"); liff.closeWindow(); }
-      else{ throw new Error(res.message||"server error"); }
+  .then(()=>{
+      alert("✅ 已送出！");
+      liff.closeWindow();     // 關掉 LIFF
   })
   .catch(err=>{
       alert("送出失敗，請再試一次");
-      btnSend.disabled=false; btnSend.innerText="重新送出";
+      btnSend.disabled=false; btnSend.style.background="#ffc107"; btnSend.innerText="重新送出";
   });
 };
 </script>
