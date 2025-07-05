@@ -7,7 +7,8 @@
  h1{color:gold;margin:24px 0 12px}
  #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px}
  #play{background:#28a745;color:#fff} #submit{background:#ffc107;color:#000;display:none}
- #wrapSubmit{display:flex;justify-content:center}  /* ←外層置中 */
+ <!-- ★ 1. 只改這 1 行 CSS，讓外層寬度 100% 就能完全置中 -->
+#wrapSubmit{display:flex;justify-content:center;width:100%}  /* ←外層置中 */
  video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
  input{width:80%;max-width:320px;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
  #msg{margin:18px 0 8px;font-size:1.4em;font-weight:bold}
@@ -73,17 +74,40 @@ mv.onpause=()=>{
 };
 
 /* --- send winner --- */
-btnSend.onclick=()=>{
- if(!inName.value||!inPhone.value){alert("請填姓名與手機");return;}
- btnSend.disabled=true; btnSend.innerText="送出中…";
+/* --- send winner --- */
+btnSend.onclick = ()=>{
+  if(!inName.value.trim() || !inPhone.value.trim()){
+      alert("請填姓名與手機");return;
+  }
+  btnSend.disabled = true;
+  btnSend.innerText = "送出中…";
+  btnSend.style.background = "#555";
 
- fetch(API,{method:"POST",mode:"no-cors",
-   headers:{"Content-Type":"text/plain"},
-   body:JSON.stringify({
-     act:"winner",userId:uid,displayName:uname,
-     prize:"預設獎項",name:inName.value,phone:inPhone.value})
- }).then(()=>{alert("✅ 已送出！");liff.closeWindow();})
-   .catch(e=>{alert("送出失敗");btnSend.disabled=false;btnSend.innerText="重新送出";});
+  fetch(API,{
+    method:"POST",mode:"no-cors",
+    headers:{"Content-Type":"text/plain"},
+    body:JSON.stringify({
+      act:"winner", userId:uid, displayName:uname,
+      prize:"預設獎項",
+      name:inName.value.trim(), phone:inPhone.value.trim()
+    })
+  }).then(()=>{
+
+      /* ★ 2. 送出成功：按鈕反白 → 改成關閉視窗 */
+      msg.textContent = "✅ 已送出！感謝填寫";
+      btnSend.disabled = false;
+      btnSend.style.background = "#fff";
+      btnSend.style.color      = "#000";
+      btnSend.innerText        = "關閉並返回";
+      btnSend.onclick          = ()=> liff.closeWindow();   // 再按一次才關
+
+  }).catch(e=>{
+      alert("送出失敗，請重試");
+      btnSend.disabled = false;
+      btnSend.innerText = "重新送出";
+      btnSend.style.background = "#ffc107";
+  });
 };
+
 </script>
 </body></html>
