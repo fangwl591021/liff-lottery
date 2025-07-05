@@ -1,0 +1,66 @@
+<!DOCTYPE html><html lang="zh-Hant"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>中獎查詢</title>
+<style>
+ body{margin:0;background:#111;color:#fff;font-family:"Microsoft JhengHei";padding:14px}
+ h2{color:#ffd700;text-align:center}
+ .card{background:#333;border-radius:10px;padding:14px;margin-bottom:12px}
+ .card h3{margin:4px 0 8px;font-size:1.1em}
+ .info{font-size:.9em;line-height:1.4}
+ .redeemBtn{margin-top:10px;width:100%;padding:10px;border:none;border-radius:6px;
+            background:#ffc107;color:#000;font-size:1em}
+ .done{background:#666;color:#bbb}
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script></head><body>
+<h2>🎁 我的中獎紀錄</h2>
+<div id="list"></div>
+
+<script>
+const LIFF_ID = "1656871455-vE1ZZLJ7";
+const API     = "https://script.google.com/macros/s/AKfycbz5BN_n2nlKNduRax7CsQjhZOWFBYaOSeCML8iKNtpJzpHmAC2LpXuhNn3coALL7HRv/exec";
+
+const $ = q=>document.querySelector(q);
+
+(async()=>{
+  await liff.init({liffId:LIFF_ID});
+  if(!liff.isLoggedIn()){ liff.login(); return; }
+  const uid  = (await liff.getProfile()).userId;
+  // 1. 取得紀錄
+  const rec = await fetch(API,{method:"POST",
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({act:'query',userId:uid})
+  }).then(r=>r.json());
+
+  render(rec);
+})();
+
+function render(arr){
+  if(!arr.length){ $("#list").innerHTML="<p style='text-align:center'>尚無中獎紀錄</p>"; return;}
+  $("#list").innerHTML = arr.map(o=>`
+    <div class="card" id="c${o.row}">
+      <h3>${o.lineName}</h3>
+      <div class="info">
+        🕒 ${o.winTime}<br>
+        🕹️ ${o.game}<br>
+        🎫 ${o.prize}
+      </div>
+      ${o.isRedeem ? 
+        `<button class="redeemBtn done" disabled>已核銷<br>${o.redeemTime}</button>` :
+        `<button class="redeemBtn" onclick="redeem(${o.row},this)">核銷</button>`}
+    </div>
+  `).join('');
+}
+
+// 2. 點核銷
+async function redeem(row,btn){
+  btn.disabled=true; btn.textContent="處理中…"; btn.style.background="#555";
+  const time = await fetch(API,{method:"POST",
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({act:'redeem',row:row})
+  }).then(r=>r.json());
+  btn.className="redeemBtn done";
+  btn.innerHTML=`已核銷<br>${time}`;
+}
+</script>
+</body></html>
