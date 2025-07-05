@@ -28,7 +28,7 @@
 
 <script>
 const LIFF_ID = "1656871455-vE1ZZLJ7";
-const API     = "https://script.google.com/macros/s/AKfycbxnVwDF0T8cGtHH4UYfQVjnMk7YjSLm7OwEq-CjjaFKwiTjjByC18tlzcVMM5p5liJK/exec";
+const API     = "https://script.google.com/macros/s/AKfycbxcBopCgRJMTZBU6uGq8Kb2kTzw-2bLApzzsgcaWP2NhprICanlH18njgZqmMPCjwMz/exec";
 
 let uid="", uname="";
 const btnPlay  = document.getElementById("play");
@@ -52,7 +52,7 @@ const btnSend  = document.getElementById("submit");
 btnPlay.onclick = ()=>{
   btnPlay.style.display="none"; msg.textContent="";
   mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(), 10000);   // 10 秒
+  setTimeout(()=>mv.pause(), 700000);   // 10 秒
 };
 
 mv.onpause = ()=>{
