@@ -34,7 +34,51 @@
 
 <script>
 const LIFF_ID="1656871455-vE1ZZLJ7";
-const API    ="https://script.google.com/macros/s/AKfycbx3zf6MN-J44YjMNgmt1wVKuuxb8KC8DBdGmrIF5N1Z3gYagXU9a1MYIS2f5TN19otR/exec";
+const API    ="/*--------------  基本設定  --------------*/
+const SHEET_ID       = '1IhVlMOpwdk66R7a1sFfyqUzJWcHyZrUNKR09BxdFkFY'; // ← 換成你的
+const DRAW_LOG_SHEET = '抽獎紀錄表';
+const WINNER_SHEET   = '中獎紀錄表';
+
+/*--------------  主入口 (只收 POST) --------------*/
+function doPost(e){
+  const body = JSON.parse(e.postData.contents || '{}');
+  switch(body.act){
+    case 'draw'  : logDraw  (body); break;
+    case 'winner': logWinner(body); break;
+    default      : return reply({error:'unknown act'});
+  }
+  return reply({ok:true});
+}
+
+/*--------------  資料寫入 --------------*/
+function logDraw({userId='',displayName='',result=''}) {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DRAW_LOG_SHEET);
+  sh.appendRow([userId, displayName, result, now()]);
+}
+function logWinner({userId='',displayName='',prize='',name='',phone=''}) {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(WINNER_SHEET);
+  sh.appendRow([
+    userId,                      // A  LINE ID
+    displayName,                 // B  LINE名稱
+    '轉轉小瑪莉',                // C  遊戲名稱
+    prize,                       // D  中獎券
+    name,                        // E  姓名
+    phone,                       // F  電話
+    now(),                       // G  中獎時間
+    Utilities.formatDate(new Date(),'Asia/Taipei','yyyy-MM-dd') // H 抽獎日期
+  ]);
+}
+
+/*--------------  共用小工具 --------------*/
+function now(){
+  return Utilities.formatDate(new Date(),'Asia/Taipei','yyyy-MM-dd HH:mm:ss');
+}
+function reply(obj){
+  return ContentService
+          .createTextOutput(JSON.stringify(obj))
+          .setMimeType(ContentService.MimeType.JSON);
+}
+";
 
 let uid="",uname="";
 const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
