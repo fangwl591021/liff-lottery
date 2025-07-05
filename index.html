@@ -3,26 +3,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>轉轉小瑪莉</title>
 <style>
-  body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
-  h1{color:gold;margin:24px 0 12px;font-size:1.8rem}
-  #play,#submit{width:80%;max-width:360px;padding:14px 0;margin-top:22px;
-     font-size:1.1rem;border:0;border-radius:8px}
-  #play{background:#28a745;color:#fff}
-  #play:disabled{background:#555}
-  #submit{background:#ffc107;color:#000;display:none}
-  video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
-  input{width:80%;max-width:360px;padding:12px;margin:6px 0;border-radius:6px;
-        border:0;font-size:1rem}
-  #msg{margin:18px 0;font-size:1.4rem;font-weight:bold}
+ body{margin:0;background:#000;color:#fff;text-align:center;font-family:"Microsoft JhengHei"}
+ h1{color:gold;margin:24px 0 12px}
+ #play,#submit{padding:14px 0;width:80%;max-width:320px;font-size:1.1em;border:none;border-radius:8px}
+ #play{background:#28a745;color:#fff} #submit{background:#ffc107;color:#000;display:none}
+ #wrapSubmit{display:flex;justify-content:center}  /* ←外層置中 */
+ video{width:100%;max-width:420px;border-radius:12px;display:none;margin-top:20px}
+ input{width:80%;max-width:320px;padding:10px;margin:6px 0;border-radius:6px;border:none;font-size:1em}
+ #msg{margin:18px 0 8px;font-size:1.4em;font-weight:bold}
 </style>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head><body>
 <h1>🎰 轉轉小瑪莉</h1>
-
 <button id="play" disabled>載入中…</button>
 
 <video id="mv" playsinline>
-  <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
+ <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
 </video>
 
 <div id="msg"></div>
@@ -30,84 +26,64 @@
 <div id="form" style="display:none">
   <input id="username" placeholder="姓名"><br>
   <input id="phone"   placeholder="手機"><br>
-  <button id="submit">送出</button>
+  <div id="wrapSubmit"><button id="submit">送出</button></div>
 </div>
 
+<audio id="winSound" src="https://files.freemusicarchive.org/storage-freemusicarchive-org/music/Creative_Commons/KieLoKaz/Free_Sound_Effects/KieLoKaz_-_Clap.mp3"></audio>
+
 <script>
-/* ------------ 基本設定 ------------ */
-const LIFF_ID = "1656871455-vE1ZZLJ7";
-const API     = "https://script.google.com/macros/s/AKfycbz5BN_n2nlKNduRax7CsQjhZOWFBYaOSeCML8iKNtpJzpHmAC2LpXuhNn3coALL7HRv/exec";
+const LIFF_ID="1656871455-vE1ZZLJ7";
+const API    ="https://script.google.com/macros/s/AKfycbz5BN_n2nlKNduRax7CsQjhZOWFBYaOSeCML8iKNtpJzpHmAC2LpXuhNn3coALL7HRv/exec";
 
-/* ------------ 取得 DOM ------------ */
-const btnPlay = document.getElementById("play");
-const mv      = document.getElementById("mv");
-const msg     = document.getElementById("msg");
-const formBox = document.getElementById("form");
-const inName  = document.getElementById("username");
-const inPhone = document.getElementById("phone");
-const btnSend = document.getElementById("submit");
+let uid="",uname="";
+const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
+      msg=document.getElementById("msg"), form=document.getElementById("form"),
+      inName=document.getElementById("username"), inPhone=document.getElementById("phone"),
+      btnSend=document.getElementById("submit"), winSound=document.getElementById("winSound");
 
-/* ------------ LIFF 初始化 ------------ */
-let uid="", uname="";
+/* --- LIFF init --- */
 (async()=>{
   await liff.init({liffId:LIFF_ID});
-  if(!liff.isLoggedIn()){ liff.login(); return; }
-  const p = await liff.getProfile();
-  uid = p.userId; uname = p.displayName;
+  if(!liff.isLoggedIn()){ liff.login();return; }
+  const p=await liff.getProfile(); uid=p.userId; uname=p.displayName;
   btnPlay.disabled=false; btnPlay.textContent="開始遊戲";
 })();
 
-/* ------------ 遊戲流程 ------------ */
-btnPlay.onclick = ()=>{
+/* --- play --- */
+btnPlay.onclick=()=>{
   btnPlay.style.display="none"; msg.textContent="";
   mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(), 10000);         // 10 秒強制停止
+  setTimeout(()=>mv.pause(),10000);               // 10s 保險
 };
 
-mv.onpause = ()=>{
+mv.onpause=()=>{
   mv.style.display="none";
-  const win = Math.random()<0.5;
-  msg.textContent = win ? "🎊 恭喜中獎！" : "😭 再接再厲！";
+  const win=Math.random()<0.5;
+  msg.textContent=win?"🎊 恭喜中獎！":"😭 再接再厲！";
 
-  // 記錄抽獎
-  fetch(API,{
-    method :"POST",
-    mode   :"no-cors",
-    headers:{ "Content-Type":"text/plain" },
-    body   : JSON.stringify({
-              act:"draw", userId:uid,
-              displayName:uname, result:win?"WIN":"MISS"
-            })
+  fetch(API,{method:"POST",mode:"no-cors",
+    headers:{"Content-Type":"text/plain"},
+    body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
   });
 
   if(win){
-    formBox.style.display="block";
-    inName.value = uname;
-    btnSend.style.display="block";
-  }else{
-    btnPlay.style.display="inline-block";
-    btnPlay.disabled=false;
-  }
+    winSound.currentTime=0; winSound.play().catch(()=>{});
+    form.style.display="block"; inName.value=uname; btnSend.style.display="block";
+  }else{ btnPlay.style.display="block"; btnPlay.disabled=false; }
 };
 
-/* ------------ 送出得獎資料 ------------ */
-btnSend.onclick = ()=>{
-  if(!inName.value || !inPhone.value){
-    alert("請填姓名與手機"); return;
-  }
-  btnSend.disabled=true; btnSend.textContent="送出中…";
+/* --- send winner --- */
+btnSend.onclick=()=>{
+ if(!inName.value||!inPhone.value){alert("請填姓名與手機");return;}
+ btnSend.disabled=true; btnSend.innerText="送出中…";
 
-  fetch(API,{
-    method :"POST",
-    mode   :"no-cors",
-    headers:{ "Content-Type":"text/plain" },
-    body   : JSON.stringify({
-              act:"winner", userId:uid, displayName:uname,
-              prize:"預設獎項", name:inName.value, phone:inPhone.value
-            })
-  })
-  .then(()=>{ alert("✅ 已送出！"); liff.closeWindow(); })
-  .catch(err=>{ alert("送出失敗："+err.message); btnSend.disabled=false; });
+ fetch(API,{method:"POST",mode:"no-cors",
+   headers:{"Content-Type":"text/plain"},
+   body:JSON.stringify({
+     act:"winner",userId:uid,displayName:uname,
+     prize:"預設獎項",name:inName.value,phone:inPhone.value})
+ }).then(()=>{alert("✅ 已送出！");liff.closeWindow();})
+   .catch(e=>{alert("送出失敗");btnSend.disabled=false;btnSend.innerText="重新送出";});
 };
 </script>
 </body></html>
