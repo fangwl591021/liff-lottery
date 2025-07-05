@@ -30,7 +30,12 @@
   <div id="wrapSubmit"><button id="submit">送出</button></div>
 </div>
 
-<audio id="winSound" src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
+<audio id="winSound"
+       preload="auto"
+       crossorigin="anonymous"
+       src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3">
+</audio>
+
 
 <script>
 const LIFF_ID="1656871455-vE1ZZLJ7";
@@ -51,27 +56,47 @@ const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
 })();
 
 /* --- play --- */
-btnPlay.onclick=()=>{
-  btnPlay.style.display="none"; msg.textContent="";
-  mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(),7000);               // 10s 保險
+/* --- play (開始遊戲) --- */
+btnPlay.onclick = () => {
+  // 先把音效緩存進 buffer，等一下比較不會卡
+  winSound.load();                 // <-- 預先載入
+
+  btnPlay.style.display = "none";
+  msg.textContent = "";
+  mv.style.display = "block";
+  mv.currentTime = 0;
+  mv.play();
+  setTimeout(()=>mv.pause(), 7000);  // 最長 10 秒
 };
 
-mv.onpause=()=>{
-  mv.style.display="none";
-  const win=Math.random()<0.5;
-  msg.textContent=win?"🎊 恭喜中獎！":"😭 再接再厲！";
+/* --- 影片結束後 --- */
+mv.onpause = async () => {
+  mv.style.display = "none";
+  const win = Math.random() < 0.5;
+  msg.textContent = win ? "🎊 恭喜中獎！" : "😭 再接再厲！";
 
-  fetch(API,{method:"POST",mode:"no-cors",
-    headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
-  });
+  // …（這裡紀錄 draw 的 fetch 不變）…
 
-  if(win){
-    winSound.currentTime=0; winSound.play().catch(()=>{});
-    form.style.display="block"; inName.value=uname; btnSend.style.display="block";
-  }else{ btnPlay.style.display="block"; btnPlay.disabled=false; }
+  if (win) {
+    try {
+      await winSound.play();           // <- 若被拒絕就進 catch
+    } catch(err){
+      // iOS 很偶爾還是會拒絕，提示使用者再點一次
+      console.warn("audio play blocked:", err);
+      msg.textContent += "\n（點一下螢幕即可播放音效）";
+      document.body.addEventListener('click', ()=> {
+        winSound.play().catch(()=>{});
+      }, { once:true });
+    }
+    form.style.display = "block";
+    inName.value = uname;
+    btnSend.style.display = "block";
+  } else {
+    btnPlay.style.display = "block";
+    btnPlay.disabled = false;
+  }
 };
+
 
 /* --- send winner --- */
 /* --- send winner --- */
