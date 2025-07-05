@@ -71,7 +71,11 @@ const loseSound = document.getElementById("loseSound");
   btnPlay.disabled = false;
   btnPlay.textContent = "開始遊戲";
 })();
-
+<!-- 在遊戲頁面加入查詢按鈕 -->
+<button onclick="window.location.href='query.html'" 
+        style="margin-top:20px;padding:12px 24px;background:#007bff;color:#fff;border:none;border-radius:8px;">
+  查看我的中獎紀錄
+</button>
 /* ------------- 遊戲流程 ------------- */
 btnPlay.onclick = () => {
   // 確保音檔預先緩存
