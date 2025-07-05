@@ -62,7 +62,7 @@ const btnPlay=document.getElementById("play"), mv=document.getElementById("mv"),
 btnPlay.onclick=()=>{
   btnPlay.style.display="none"; msg.textContent="";
   mv.style.display="block"; mv.currentTime=0; mv.play();
-  setTimeout(()=>mv.pause(),10000);               // 10s 保險
+  setTimeout(()=>mv.pause(),7000);               // 10s 保險
 };
 
 mv.onpause=()=>{
