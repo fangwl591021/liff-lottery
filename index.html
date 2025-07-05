@@ -61,11 +61,14 @@ mv.onpause = ()=>{
   msg.textContent = win ? "🎊 恭喜中獎！" : "😭 再接再厲！";
 
   fetch(API,{
-    method:"POST",
-    mode  : "no-cors", 
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
-  });
+  method : "POST",
+  mode   : "no-cors",
+- headers: {"Content-Type":"application/json"},
+- body   : JSON.stringify({...})
++ headers: {"Content-Type":"text/plain"}, // <= 簡單請求
++ body   : JSON.stringify({...})         // 內容不變
+});
+
 
   if(win){
     formBox.style.display = "block";
