@@ -28,7 +28,7 @@
 
 <script>
 const LIFF_ID = "1656871455-vE1ZZLJ7";
-const API     = "https://script.google.com/macros/s/AKfycbxWBmyKiIrjBB7rxepoXmNwvsH8rdv7EG18eS6oSWnXO3vitDYsvUBJephypUgbv3Io/exec";
+const API     = "https://script.google.com/macros/s/AKfycbylQMEiD-UifV9oXlzznCN3wl9N_0vGoJCbOJyMhy0l0BiEgbcYDaJ9q_dyqIN841Q/exec";
 
 let uid="", uname="";
 const btnPlay  = document.getElementById("play");
@@ -62,6 +62,7 @@ mv.onpause = ()=>{
 
   fetch(API,{
     method:"POST",
+    mode  : "no-cors", 
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
   });
