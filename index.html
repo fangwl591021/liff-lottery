@@ -61,12 +61,12 @@ btnPlay.onclick = () => {
   // 先把音效緩存進 buffer，等一下比較不會卡
   winSound.load();                 // <-- 預先載入
 
-  btnPlay.style.display = "none";
+btnPlay.style.display = "none";
   msg.textContent = "";
   mv.style.display = "block";
   mv.currentTime = 0;
   mv.play();
-  setTimeout(()=>mv.pause(), 7000);  // 最長 10 秒
+  setTimeout(()=>mv.pause(), 7000);  // 最長 7 秒
 };
 
 /* --- 影片結束後 --- */
