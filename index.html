@@ -32,40 +32,33 @@
     <input id="phone"   placeholder="手機" />
     <button id="submit">送出</button>
   </div>
-  <audio id="winSound" preload="auto" src="你的中獎音效.mp3"></audio>
-  <audio id="loseSound" preload="auto" src="你的未中獎音效.mp3"></audio>
 
 <script>
 const LIFF_ID = "1656871455-vE1ZZLJ7";
-// ❶ 一定要替换成你自己的 Exec URL
-const API     = "https://script.google.com/macros/s/AKfycbyFIDb6h6pXIu9nUy5YDezXnn9TSE86QLtkSMkuLvSByNzk8SaYLwzTwvIuwq8RIDAPiQ/exec";
+// 一定要替换为最新部署后的 Exec URL
+const API     = "https://script.google.com/macros/s/AKfycbxlIvWJ9oCCfPAcB4AqjDTQqhdhNd6pMfPhMuZkKKhGzT4Wl4p3rgFrGdsnBTWM2BA4dQ/exec";
 
 let uid="", uname="";
+const btnPlay = document.getElementById("play"),
+      mv      = document.getElementById("mv"),
+      msg     = document.getElementById("msg"),
+      form    = document.getElementById("form"),
+      inName  = document.getElementById("username"),
+      inPhone = document.getElementById("phone"),
+      btnSend = document.getElementById("submit");
 
-const btnPlay   = document.getElementById("play"),
-      mv        = document.getElementById("mv"),
-      msg       = document.getElementById("msg"),
-      form      = document.getElementById("form"),
-      inName    = document.getElementById("username"),
-      inPhone   = document.getElementById("phone"),
-      btnSend   = document.getElementById("submit"),
-      winSound  = document.getElementById("winSound"),
-      loseSound = document.getElementById("loseSound");
-
-// LIFF init
+// LIFF 初始化
 (async()=>{
   await liff.init({liffId:LIFF_ID});
   if(!liff.isLoggedIn()){ liff.login(); return; }
   const p = await liff.getProfile();
   uid = p.userId; uname = p.displayName;
-  btnPlay.disabled = false;
-  btnPlay.textContent = "開始遊戲";
+  btnPlay.disabled = false; btnPlay.textContent = "開始遊戲";
 })();
 
 btnPlay.onclick=()=>{
-  winSound.load(); loseSound.load();
   btnPlay.style.display="none"; msg.textContent="";
-  mv.style.display="block"; mv.play();
+  mv.style.display="block"; mv.currentTime=0; mv.play();
   setTimeout(()=>mv.pause(),7000);
 };
 
@@ -76,7 +69,7 @@ mv.onpause=()=>{
     ? "🎊 恭喜中獎！詳情請至「中獎紀錄查詢」查看"
     : "😭 再接再厲！";
 
-  // 記錄 draw
+  // 記錄抽獎
   fetch(API,{
     method:"POST", mode:"no-cors",
     headers:{"Content-Type":"text/plain"},
@@ -88,16 +81,8 @@ mv.onpause=()=>{
     })
   });
 
-  if (!win) {
-    loseSound.play().catch();
-    return;
-  }
-
-  // 中獎顯示表單
-  winSound.play().catch();
-  form.style.display="block";
-  inName.value = uname;
-  btnSend.style.display = "block";
+  if (!win) return;
+  form.style.display="block"; inName.value=uname; btnSend.style.display="block";
 };
 
 btnSend.onclick=()=>{
@@ -112,13 +97,13 @@ btnSend.onclick=()=>{
       act:"winner",
       userId:uid,
       displayName:uname,
-      prize:"",  // 不顯示獎項
+      // prize 会由后端直接写入「中獎紀錄表」
       name: inName.value.trim(),
       phone: inPhone.value.trim()
     })
   }).then(()=>{
     msg.textContent="✅ 已送出！感謝填寫";
-    btnSend.innerText="點右上角 X 返回";
+    btnSend.textContent="點右上角 X 返回";
     btnSend.onclick = ()=> liff.closeWindow();
   }).catch(()=>{
     alert("送出失敗"); btnSend.disabled=false; btnSend.textContent="重新送出";
