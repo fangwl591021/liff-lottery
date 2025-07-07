@@ -5,16 +5,26 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>轉轉小瑪莉</title>
   <style>
-    body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei" }
-    h1 { color:gold; margin:24px 0 12px }
-    #play, #submit { width:80%; max-width:320px; margin:12px auto; padding:14px 0;
-      font-size:1.1em; border:none; border-radius:8px }
-    #play { background:#28a745; color:#fff }
-    #submit { background:#ffc107; color:#000; display:none }
-    #wrapSubmit{display:flex; justify-content:center}
-    video { width:100%; max-width:420px; border-radius:12px; display:none; margin-top:20px }
-    input { width:80%; max-width:320px; padding:10px; margin:6px 0; border-radius:6px; border:none; font-size:1em }
-    #msg { margin:18px 0 8px; font-size:1.4em; font-weight:bold }
+    body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei"; }
+    h1 { color:gold; margin:24px 0 12px; }
+    #play, #submit {
+      width:80%; max-width:320px; margin:12px auto; padding:14px 0;
+      font-size:1.1em; border:none; border-radius:8px;
+      display:block;
+    }
+    #play { background:#28a745; color:#fff; }
+    #submit { background:#ffc107; color:#000; display:none; }
+    #wrapSubmit { display:flex; justify-content:center; }
+    video {
+      width:100%; max-width:420px; border-radius:12px;
+      display:none; margin-top:20px;
+    }
+    input {
+      width:80%; max-width:320px; padding:10px; margin:6px 0;
+      border-radius:6px; border:none; font-size:1em;
+      display:block; margin-left:auto; margin-right:auto;
+    }
+    #msg { margin:18px 0 8px; font-size:1.4em; font-weight:bold; }
   </style>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
@@ -37,20 +47,20 @@
 
 <script>
 const LIFF_ID = "1656871455-vE1ZZLJ7";
-let uid="", uname="";
-const btnPlay = document.getElementById("play"),
-      mv      = document.getElementById("mv"),
-      msg     = document.getElementById("msg"),
-      form    = document.getElementById("form"),
-      inName  = document.getElementById("username"),
-      inPhone = document.getElementById("phone"),
-      btnSend = document.getElementById("submit"),
-      winSound= document.getElementById("winSound"),
-      loseSound=document.getElementById("loseSound");
+let uid = "", uname = "";
+const btnPlay   = document.getElementById("play"),
+      mv        = document.getElementById("mv"),
+      msg       = document.getElementById("msg"),
+      form      = document.getElementById("form"),
+      inName    = document.getElementById("username"),
+      inPhone   = document.getElementById("phone"),
+      btnSend   = document.getElementById("submit"),
+      winSound  = document.getElementById("winSound"),
+      loseSound = document.getElementById("loseSound");
 
 // 初始化 LIFF
-(async()=>{
-  await liff.init({liffId:LIFF_ID});
+;(async ()=>{
+  await liff.init({ liffId: LIFF_ID });
   if (!liff.isLoggedIn()) {
     liff.login();
     return;
@@ -58,13 +68,14 @@ const btnPlay = document.getElementById("play"),
   const profile = await liff.getProfile();
   uid   = profile.userId;
   uname = profile.displayName;
-  btnPlay.disabled = false;
+  btnPlay.disabled    = false;
   btnPlay.textContent = "開始遊戲";
 })();
 
-// 按鈕點擊：播放影片
+// 點擊開始遊戲
 btnPlay.onclick = () => {
-  winSound.load(); loseSound.load();
+  winSound.load();
+  loseSound.load();
   btnPlay.style.display = "none";
   msg.textContent = "";
   mv.style.display = "block";
@@ -73,11 +84,12 @@ btnPlay.onclick = () => {
   setTimeout(()=> mv.pause(), 7000);
 };
 
-// 影片暫停時觸發抽獎
+// 影片暫停後觸發抽獎
 mv.onpause = () => {
   mv.style.display = "none";
-  // 50% 機率中獎
-  if (Math.random() >= 0.5) {
+  // 客戶端 50% 機率判定
+  const isWin = Math.random() < 0.5;
+  if (!isWin) {
     msg.textContent = "😭 再接再厲！";
     loseSound.play().catch(()=>{});
     return;
@@ -96,16 +108,16 @@ mv.onpause = () => {
             詳情請至「中獎紀錄查詢」查看
           </span>
         `;
+        form.style.display = "block";
+        inName.value = uname;
+        btnSend.style.display = "block";
       }
       winSound.play().catch(()=>{});
-      // 若需填寫表單再顯示
-      form.style.display = prize ? "block" : "none";
-      inName.value = uname;
     })
-    .handleClientRequest({ act:'draw' });
+    .handleClientRequest({ act: 'draw' });
 };
 
-// 送出表單
+// 送出中獎者資料（保持原 fetch 或改用 google.script.run 都可）
 btnSend.onclick = () => {
   if (!inName.value.trim() || !inPhone.value.trim()) {
     alert("請填姓名與手機");
@@ -115,6 +127,7 @@ btnSend.onclick = () => {
   btnSend.innerText  = "送出中…";
   btnSend.style.background = "#555";
 
+  // 這邊若已有 act:'winner' 支援可呼叫，否則保留原 fetch
   google.script.run
     .withSuccessHandler(resp => {
       msg.textContent = "✅ 已送出！感謝填寫";
@@ -128,7 +141,7 @@ btnSend.onclick = () => {
       act:         'winner',
       userId:      uid,
       displayName: uname,
-      prizeName:   prize ? prize.name : '',
+      prizeName:   /* prize.name */ inName.value, // 若需要，可改成實際 prize.name
       name:        inName.value.trim(),
       phone:       inPhone.value.trim()
     });
