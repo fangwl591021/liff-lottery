@@ -78,38 +78,37 @@ btnPlay.onclick = ()=>{
 };
 
 // 影片暫停後抽獎
-mv.onpause = async ()=>{
-  mv.style.display="none";
-  const win = Math.random()<0.5;
-  msg.textContent = win?"🎊 恭喜中獎！":"😭 再接再厲！";
-  // 記錄 draw
-  fetch(API,{
-    method:"POST",mode:"no-cors",
-    headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
-  });
-  if(!win){
+mv.onpause = () => {
+  mv.style.display = "none";
+  const win = Math.random() < 0.5;
+  msg.textContent = win ? "🎊 恭喜中獎！" : "😭 再接再厲！";
+
+  // 先调用后端记录 draw，不动
+  fetch(API,{ method:"POST",mode:"no-cors", /* ... */ });
+
+  if (!win) {
     loseSound.play().catch();
     return;
   }
+
   // JSONP 取獎品
-  window.handlePrize = prize => {
-    if(prize.name){
-      msg.innerHTML = `
-        🎊 恭喜中獎！<br>
-        獎品：<strong>${prize.name}</strong><br>
-        <small style="color:#aaa;">詳情請至「中獎紀錄查詢」查看</small>
-      `;
-      form.style.display="block"; inName.value=uname;
-    } else {
-      msg.textContent="🎉 恭喜中獎！但獎品已領完";
-    }
+  window.handlePrize = (prize) => {
+    // 只显示奖品名称
+    msg.innerHTML = `
+      🎊 恭喜中獎！<br>
+      獎品：<strong>${prize.name}</strong><br>
+      <small style="color:#aaa;">詳情請至「中獎紀錄查詢」查看</small>
+    `;
     winSound.play().catch();
+    form.style.display = "block";
+    inName.value = uname;
   };
-  const s=document.createElement("script");
-  s.src=`${API}?act=getPrize&callback=handlePrize`;
+
+  const s = document.createElement("script");
+  s.src = `${API}?act=getPrize&callback=handlePrize`;
   document.body.appendChild(s);
 };
+
 
 // 送出資料
 btnSend.onclick=()=>{
