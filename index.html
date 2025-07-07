@@ -34,90 +34,104 @@
          src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
   <audio id="loseSound" preload="auto"
          src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3"></audio>
+
 <script>
 const LIFF_ID = "1656871455-vE1ZZLJ7";
-const API     = "https://script.google.com/macros/s/AKfycbxnxsaq6p9M7NcRcVBSyqro1HEWEbwjNDGttlMoby1PMLBwUP-aX4F5UBFrNmmuaZrZ/exec";
 let uid="", uname="";
-const btnPlay=document.getElementById("play"),
-      mv=document.getElementById("mv"),
-      msg=document.getElementById("msg"),
-      form=document.getElementById("form"),
-      inName=document.getElementById("username"),
-      inPhone=document.getElementById("phone"),
-      btnSend=document.getElementById("submit"),
-      winSound=document.getElementById("winSound"),
+const btnPlay = document.getElementById("play"),
+      mv      = document.getElementById("mv"),
+      msg     = document.getElementById("msg"),
+      form    = document.getElementById("form"),
+      inName  = document.getElementById("username"),
+      inPhone = document.getElementById("phone"),
+      btnSend = document.getElementById("submit"),
+      winSound= document.getElementById("winSound"),
       loseSound=document.getElementById("loseSound");
 
+// 初始化 LIFF
 (async()=>{
   await liff.init({liffId:LIFF_ID});
-  if(!liff.isLoggedIn()){ liff.login(); return; }
-  const profile=await liff.getProfile();
-  uid=profile.userId;
-  uname=profile.displayName;
-  btnPlay.disabled=false;
-  btnPlay.textContent="開始遊戲";
+  if (!liff.isLoggedIn()) {
+    liff.login();
+    return;
+  }
+  const profile = await liff.getProfile();
+  uid   = profile.userId;
+  uname = profile.displayName;
+  btnPlay.disabled = false;
+  btnPlay.textContent = "開始遊戲";
 })();
 
-btnPlay.onclick=()=>{
+// 按鈕點擊：播放影片
+btnPlay.onclick = () => {
   winSound.load(); loseSound.load();
-  btnPlay.style.display="none";
-  msg.textContent="";
-  mv.style.display="block";
-  mv.currentTime=0;
+  btnPlay.style.display = "none";
+  msg.textContent = "";
+  mv.style.display = "block";
+  mv.currentTime = 0;
   mv.play();
-  setTimeout(()=>mv.pause(),7000);
+  setTimeout(()=> mv.pause(), 7000);
 };
 
-mv.onpause=async ()=>{
-  mv.style.display="none";
-  const win=Math.random()<0.5;
-  msg.textContent=win?"🎊 恭喜中獎！":"😭 再接再厲！";
-  fetch(API,{
-    method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({act:"draw",userId:uid,displayName:uname,result:win?"WIN":"MISS"})
-  });
-  if(win){
-    try{ await winSound.play(); }catch(_){}
-    form.style.display="block";
-    inName.value=uname;
-    btnSend.style.display="block";
-  } else {
-    try{ await loseSound.play(); }catch(_){}
+// 影片暫停時觸發抽獎
+mv.onpause = () => {
+  mv.style.display = "none";
+  // 50% 機率中獎
+  if (Math.random() >= 0.5) {
+    msg.textContent = "😭 再接再厲！";
+    loseSound.play().catch(()=>{});
+    return;
   }
+  // 真中獎：呼叫後端隨機取獎
+  google.script.run
+    .withSuccessHandler(res => {
+      const prize = res.prize;
+      if (!prize) {
+        msg.textContent = "🎉 恭喜中獎！但獎品已領完";
+      } else {
+        msg.innerHTML = `
+          🎊 恭喜中獎！<br>
+          獎品：<strong>${prize.name}</strong><br>
+          <span style="font-size:0.9em;color:#aaa;">
+            詳情請至「中獎紀錄查詢」查看
+          </span>
+        `;
+      }
+      winSound.play().catch(()=>{});
+      // 若需填寫表單再顯示
+      form.style.display = prize ? "block" : "none";
+      inName.value = uname;
+    })
+    .handleClientRequest({ act:'draw' });
 };
 
-btnSend.onclick=()=>{
-  if(!inName.value.trim() || !inPhone.value.trim()){
+// 送出表單
+btnSend.onclick = () => {
+  if (!inName.value.trim() || !inPhone.value.trim()) {
     alert("請填姓名與手機");
     return;
   }
-  btnSend.disabled=true;
-  btnSend.innerText="送出中…";
-  btnSend.style.background="#555";
+  btnSend.disabled   = true;
+  btnSend.innerText  = "送出中…";
+  btnSend.style.background = "#555";
 
-  fetch(API,{
-    method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({
-      act:"winner",
-      userId:uid,
-      displayName:uname,
-      prize:"預設獎項",
-      name:inName.value.trim(),
-      phone:inPhone.value.trim()
+  google.script.run
+    .withSuccessHandler(resp => {
+      msg.textContent = "✅ 已送出！感謝填寫";
+      btnSend.disabled = false;
+      btnSend.style.background = "#fff";
+      btnSend.style.color = "#000";
+      btnSend.innerText = "點右上角 X 返回";
+      btnSend.onclick = () => liff.closeWindow();
     })
-  }).then(()=>{
-    msg.textContent="✅ 已送出！感謝填寫";
-    btnSend.disabled=false;
-    btnSend.style.background="#fff";
-    btnSend.style.color="#000";
-    btnSend.innerText="點右上角 X 返回";
-    btnSend.onclick=()=>liff.closeWindow();
-  }).catch(()=>{
-    alert("送出失敗");
-    btnSend.disabled=false;
-    btnSend.innerText="重新送出";
-    btnSend.style.background="#ffc107";
-  });
+    .handleClientRequest({
+      act:         'winner',
+      userId:      uid,
+      displayName: uname,
+      prizeName:   prize ? prize.name : '',
+      name:        inName.value.trim(),
+      phone:       inPhone.value.trim()
+    });
 };
 </script>
 </body>
