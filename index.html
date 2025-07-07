@@ -15,10 +15,7 @@
     #play{background:#28a745;color:#fff;}
     #submit{background:#ffc107;color:#000;display:none;}
     video{width:100%;max-width:420px;border-radius:12px;display:none;margin:20px auto 0;}
-    input{
-      width:80%;max-width:320px;padding:10px;margin:6px auto;
-      border-radius:6px;border:none;font-size:1em;display:block;
-    }
+    input{width:80%;max-width:320px;padding:10px;margin:6px auto;border-radius:6px;border:none;font-size:1em;display:block;}
     #msg{margin:18px 0 8px;font-size:1.4em;font-weight:bold;}
   </style>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -27,7 +24,7 @@
   <h1>🎰 轉轉小瑪莉</h1>
   <button id="play" disabled>載入中…</button>
   <video id="mv" playsinline>
-    <source src="https://voom-obs.line-scdn.net/.../video.mp4">
+    <source src="你的抽獎影片網址.mp4">
   </video>
   <div id="msg"></div>
   <div id="form" style="display:none">
@@ -35,12 +32,14 @@
     <input id="phone"   placeholder="手機" />
     <button id="submit">送出</button>
   </div>
-  <audio id="winSound" preload="auto" src="https://aiwe.cc/.../win.mp3"></audio>
-  <audio id="loseSound" preload="auto" src="https://aiwe.cc/.../lose.mp3"></audio>
+  <audio id="winSound" preload="auto" src="你的中獎音效.mp3"></audio>
+  <audio id="loseSound" preload="auto" src="你的未中獎音效.mp3"></audio>
 
 <script>
 const LIFF_ID = "1656871455-vE1ZZLJ7";
+// ❶ 一定要替换成你自己的 Exec URL
 const API     = "https://script.google.com/macros/s/AKfycbyFIDb6h6pXIu9nUy5YDezXnn9TSE86QLtkSMkuLvSByNzk8SaYLwzTwvIuwq8RIDAPiQ/exec";
+
 let uid="", uname="";
 
 const btnPlay   = document.getElementById("play"),
@@ -53,7 +52,7 @@ const btnPlay   = document.getElementById("play"),
       winSound  = document.getElementById("winSound"),
       loseSound = document.getElementById("loseSound");
 
-// LIFF 初始化
+// LIFF init
 (async()=>{
   await liff.init({liffId:LIFF_ID});
   if(!liff.isLoggedIn()){ liff.login(); return; }
@@ -65,10 +64,8 @@ const btnPlay   = document.getElementById("play"),
 
 btnPlay.onclick=()=>{
   winSound.load(); loseSound.load();
-  btnPlay.style.display="none";
-  msg.textContent="";
-  mv.style.display="block";
-  mv.currentTime=0; mv.play();
+  btnPlay.style.display="none"; msg.textContent="";
+  mv.style.display="block"; mv.play();
   setTimeout(()=>mv.pause(),7000);
 };
 
@@ -76,48 +73,53 @@ mv.onpause=()=>{
   mv.style.display="none";
   const win = Math.random()<0.5;
   msg.textContent = win
-    ? "🎊 恭喜中獎！\n詳情請至「中獎紀錄查詢」查看"
+    ? "🎊 恭喜中獎！詳情請至「中獎紀錄查詢」查看"
     : "😭 再接再厲！";
-  // 記錄抽獎（不動）
+
+  // 記錄 draw
   fetch(API,{
-    method:"POST",mode:"no-cors",
+    method:"POST", mode:"no-cors",
     headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({ act:"draw", userId:uid, displayName:uname, result:win?"WIN":"MISS" })
+    body: JSON.stringify({
+      act:"draw",
+      userId:uid,
+      displayName:uname,
+      result: win?"WIN":"MISS"
+    })
   });
-  if(!win){
+
+  if (!win) {
     loseSound.play().catch();
     return;
   }
-  // 顯示表單
+
+  // 中獎顯示表單
   winSound.play().catch();
   form.style.display="block";
   inName.value = uname;
-  btnSend.style.display="block";
+  btnSend.style.display = "block";
 };
 
-// 送出中獎資料
 btnSend.onclick=()=>{
   if(!inName.value.trim()||!inPhone.value.trim()){
     alert("請填姓名與手機"); return;
   }
-  btnSend.disabled=true;
-  btnSend.textContent="送出中…";
+  btnSend.disabled=true; btnSend.textContent="送出中…";
   fetch(API,{
-    method:"POST",mode:"no-cors",
+    method:"POST", mode:"no-cors",
     headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({
+    body: JSON.stringify({
       act:"winner",
       userId:uid,
       displayName:uname,
-      prize:"",            // 這邊不顯示獎項名稱
-      name:inName.value.trim(),
-      phone:inPhone.value.trim()
+      prize:"",  // 不顯示獎項
+      name: inName.value.trim(),
+      phone: inPhone.value.trim()
     })
   }).then(()=>{
     msg.textContent="✅ 已送出！感謝填寫";
-    btnSend.disabled=false;
-    btnSend.textContent="點右上角 X 返回";
-    btnSend.onclick=()=>liff.closeWindow();
+    btnSend.innerText="點右上角 X 返回";
+    btnSend.onclick = ()=> liff.closeWindow();
   }).catch(()=>{
     alert("送出失敗"); btnSend.disabled=false; btnSend.textContent="重新送出";
   });
