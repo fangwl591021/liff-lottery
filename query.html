@@ -28,7 +28,7 @@
 
   <script>
     const LIFF_ID = '1656871455-vE1ZZLJ7'; // 您的 LIFF ID
-    const API     = 'https://script.google.com/macros/s/AKfycbxhQLO9_34IqJuMyA35mhyJlMoittqFDPYzXHv7hSHG-PPrICg_iro0sn9TmSKj_VLi-g/exec'; // 您的 Apps Script 網路應用程式 URL
+    const API     = 'https://script.google.com/macros/s/AKfycbyH1aQ8_jNm8-ZE_YpLUY8lRskOvP9ljJBt2Y2jXGGXlETcWOurEcy3ITS9ylTx-MaQjg/exec'; // 您的 Apps Script 網路應用程式 URL
 
     async function init() {
       await liff.init({ liffId: LIFF_ID });
@@ -71,7 +71,7 @@
         }
         
         const j = await res.json();
-        console.log("後端返回數據:", j); 
+        console.log("後端返回數據:", j); // *** 偵錯日誌：查看後端返回的原始 JSON 數據 ***
 
         if (!j.ok) {
             throw new Error(j.msg || '後端返回錯誤');
@@ -89,7 +89,7 @@
         if (typeof date === 'string') {
             date = new Date(date.replace(/-/g, '/')); // 嘗試解析字串
         }
-        if (isNaN(date.getTime())) return ''; // 如果是無效日期
+        if (isNaN(date.getTime())) return '無效日期'; // 如果是無效日期，顯示明確提示
 
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -106,21 +106,27 @@
       
       const now = new Date(); // 獲取當前時間，用於判斷是否過期
 
+      console.log('渲染數據:', arr); // *** 偵錯日誌：查看渲染函數接收到的數據 ***
+
       list.innerHTML = arr.map(o => {
+        console.log('處理單條紀錄:', o); // *** 偵錯日誌：查看單條紀錄的內容 ***
+
         let isExpired = false;
-        let expiryDisplay = '未定義'; // 顯示在頁面上的過期時間
+        let expiryDisplay = '無過期時間'; // 預設值，如果 o.expiryTime 不存在或無效
         
         // *** 關鍵修改：使用 o.expiryTime 來判斷和顯示過期時間 ***
         if (o.expiryTime) {
-            // 確保 o.expiryTime 是字串，並且可以被 new Date() 解析
+            console.log('原始過期時間字串:', o.expiryTime); // *** 偵錯日誌：查看原始過期時間字串 ***
             const expiryDateObj = new Date(String(o.expiryTime).replace(/-/g, '/')); 
+            console.log('解析後的過期時間物件:', expiryDateObj, '是否有效:', isNaN(expiryDateObj.getTime())); // *** 偵錯日誌：查看解析結果 ***
+
             if (!isNaN(expiryDateObj.getTime())) {
                 expiryDisplay = formatDateDisplay(expiryDateObj); // 格式化為 YYYY-MM-DD 顯示
                 if (expiryDateObj < now) { // 如果過期時間早於當前時間，則已過期
                     isExpired = true;
                 }
             } else {
-                expiryDisplay = '日期格式錯誤'; // 如果解析失敗
+                expiryDisplay = '過期日期格式錯誤'; // 如果解析失敗，顯示明確提示
             }
         }
 
@@ -138,11 +144,11 @@
           <div class="card" id="c${o.recordId}">
             <h3>${o.prize}</h3>
             <div class="info">
-              店家名稱：${o.storeName}<br>
-              中獎時間：${o.winTime}<br>
+              店家名稱：${o.storeName || 'N/A'}<br> <!-- 如果沒有店家名稱，顯示 N/A -->
+              中獎時間：${o.winTime || 'N/A'}<br>
               過期時間：<span class="expiry-date">${expiryDisplay}</span><br>
               核銷狀態：${redeemedText}<br>
-              ${o.redeemed === '是' ? `核銷時間：${o.redeemTime}<br>` : ''}
+              ${o.redeemed === '是' ? `核銷時間：${o.redeemTime || 'N/A'}<br>` : ''}
             </div>
             ${buttonHtml}
           </div>`;
@@ -192,8 +198,8 @@
         }
         infoDiv.innerHTML = currentInfoHTML;
 
-        btn.className='redeemBtn done';
-        btn.innerHTML=`已核銷<br>${redeeemTime}`; 
+        btn.className='redeeemBtn done'; // 注意這裡的 className 應該是 'redeemBtn'
+        btn.innerHTML=`已核銷<br>${redeemTime}`; 
 
       } catch(e) {
         console.error("核銷失敗:", e); 
