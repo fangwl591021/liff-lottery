@@ -60,7 +60,7 @@
       const list = document.getElementById('list');
       list.innerHTML = '<div class="loading">載入中…</div>';
       try {
-        const res = await fetch(`${API}?userId=${uid}`, {
+        const res = await fetch(`${API}?act=query&userId=${uid}`, { // 新增 act=query 參數
           method: 'GET', 
           mode: 'cors' 
         });
@@ -86,7 +86,9 @@
     // 新增日期格式化函數，用於顯示日期部分
     function formatDateDisplay(date) {
         if (!date) return '';
-        // 這裡不再需要 String(date).replace(/-/g, '/') 因為我們期望傳入的是 Date 物件
+        if (typeof date === 'string') {
+            date = new Date(date.replace(/-/g, '/')); // 嘗試解析字串
+        }
         if (isNaN(date.getTime())) return '無效日期'; // 如果是無效日期，顯示明確提示
 
         const year = date.getFullYear();
@@ -104,24 +106,27 @@
       
       const now = new Date(); // 獲取當前時間，用於判斷是否過期
 
-      list.innerHTML = arr.map(o => {
-        let isExpired = false;
-        let expiryDisplay = '無法計算過期日'; // 預設值
-        
-        // *** 關鍵修改：從 o.winTime 計算過期時間 ***
-        if (o.winTime) {
-            const winDate = new Date(String(o.winTime).replace(/-/g, '/')); // 確保解析
-            if (!isNaN(winDate.getTime())) {
-                const calculatedExpiryDate = new Date(winDate);
-                calculatedExpiryDate.setDate(winDate.getDate() + 90); // 中獎時間加90天
-                
-                expiryDisplay = formatDateDisplay(calculatedExpiryDate); // 格式化為 YYYY-MM-DD 顯示
+      console.log('渲染數據:', arr); 
 
-                if (calculatedExpiryDate < now) { // 如果計算出的過期時間早於當前時間，則已過期
+      list.innerHTML = arr.map(o => {
+        console.log('處理單條紀錄:', o); 
+
+        let isExpired = false;
+        let expiryDisplay = '無過期時間'; // 預設值，如果 o.expiryTime 不存在或無效
+        
+        // *** 這裡直接使用後端傳來的 o.expiryTime 進行顯示和判斷 ***
+        if (o.expiryTime) {
+            console.log('原始過期時間字串:', o.expiryTime); 
+            const expiryDateObj = new Date(String(o.expiryTime).replace(/-/g, '/')); 
+            console.log('解析後的過期時間物件:', expiryDateObj, '是否有效:', isNaN(expiryDateObj.getTime())); 
+
+            if (!isNaN(expiryDateObj.getTime())) {
+                expiryDisplay = formatDateDisplay(expiryDateObj); // 格式化為 YYYY-MM-DD 顯示
+                if (expiryDateObj < now) { // 如果過期時間早於當前時間，則已過期
                     isExpired = true;
                 }
             } else {
-                expiryDisplay = '中獎時間格式錯誤'; // 如果中獎時間解析失敗
+                expiryDisplay = '過期日期格式錯誤'; // 如果解析失敗，顯示明確提示
             }
         }
 
