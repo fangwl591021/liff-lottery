@@ -39,7 +39,221 @@
 const LIFF_ID = "1656871455-vE1ZZLJ7"; 
 
 // **重要：請務必將此處的 API 網址替換為您最新部署 Apps Script 時獲取到的「網路應用程式網址」**
-const API     = "https://script.google.com/macros/s/AKfycbxhQLO9_34IqJuMyA35mhyJlMoittqFDPYzXHv7hSHG-PPrICg_iro0sn9TmSKj_VLi-g/exec"; 
+const API     = "<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>我的中獎紀錄</title>
+  <style>
+    body { margin:0; background:#111; color:#fff; font-family:"Microsoft JhengHei"; padding:16px; }
+    h2 { text-align:center; color:#ffd700; margin-bottom:16px; }
+    .loading, .error { text-align:center; margin:20px 0; color:#ccc; }
+    .card { background:#333; padding:12px; margin:12px 0; border-radius:8px; }
+    .card h3 { margin:0 0 8px; color:#fff; }
+    .info { font-size:.9em; line-height:1.4; }
+    .expiry-date { color: #ff5555; font-weight: bold; } /* 紅字樣式 */
+    .redeemBtn { width:100%; padding:10px; margin-top:8px; border:none; border-radius:6px;
+                 background:#ffc107; color:#000; font-size:1em; }
+    .redeemBtn.done { background:#666; color:#bbb; cursor:not-allowed; } /* 已核銷按鈕樣式 */
+    .redeemBtn.expired { background:#dc3545; color:#fff; cursor:not-allowed; } /* 過期按鈕樣式 */
+    .back { position:fixed; top:12px; left:12px; background:#007bff; color:#fff;
+            border:none; padding:8px 12px; border-radius:5px; }
+  </style>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <button class="back" onclick="history.back()">← 返回</button>
+  <h2>🎁 我的中獎紀錄</h2>
+  <div id="list"><div class="loading">載入中…</div></div>
+
+  <script>
+    const LIFF_ID = '1656871455-vE1ZZLJ7'; // 您的 LIFF ID
+    const API     = 'https://script.google.com/macros/s/AKfycbyH1aQ8_jNm8-ZE_YpLUY8lRskOvP9ljJBt2Y2jXGGXlETcWOurEcy3ITS9ylTx-MaQjg/exec'; // 您的 Apps Script 網路應用程式 URL
+
+    async function init() {
+      await liff.init({ liffId: LIFF_ID });
+      
+      let uid;
+      try {
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          uid = profile.userId;
+        } else {
+          console.warn('LIFF 未登入，嘗試獲取假性 userId 進行測試。');
+          uid = 'Udb7c5578b402bf6f1e0f7065fc57c17b'; // <-- 這裡可以放您試算表中現有的 LINE ID 進行測試
+          document.getElementById('list').innerHTML = `<div class="error">LIFF 登入失敗或不在 LINE 環境中。使用測試ID: ${uid}</div>`;
+        }
+      } catch (e) {
+        console.error("無法獲取 LIFF 用戶資料:", e);
+        uid = 'Udb7c5578b402bf6f1e0f7065fc57c17b'; // 備用測試 ID
+        document.getElementById('list').innerHTML = `<div class="error">獲取用戶ID失敗：${e.message}。使用測試ID: ${uid}</div>`;
+      }
+      
+      if (uid) {
+        loadRecords(uid);
+      } else {
+        document.getElementById('list').innerHTML = `<div class="error">無法獲取用戶ID，請確認 LIFF 設定。</div>`;
+      }
+    }
+
+    async function loadRecords(uid) {
+      const list = document.getElementById('list');
+      list.innerHTML = '<div class="loading">載入中…</div>';
+      try {
+        const res = await fetch(`${API}?userId=${uid}`, {
+          method: 'GET', 
+          mode: 'cors' 
+        });
+
+        if (!res.ok) {
+            console.error("HTTP 錯誤狀態:", res.status);
+            throw new Error(`HTTP 錯誤 ${res.status}`);
+        }
+        
+        const j = await res.json();
+        console.log("後端返回數據:", j); // *** 偵錯日誌：查看後端返回的原始 JSON 數據 ***
+
+        if (!j.ok) {
+            throw new Error(j.msg || '後端返回錯誤');
+        }
+        render(j.records); 
+      } catch(err) {
+        console.error("載入紀錄失敗:", err); 
+        list.innerHTML = `<div class="error">讀取失敗：${err.message}</div>`;
+      }
+    }
+
+    // 新增日期格式化函數，用於顯示日期部分
+    function formatDateDisplay(date) {
+        if (!date) return '';
+        if (typeof date === 'string') {
+            date = new Date(date.replace(/-/g, '/')); // 嘗試解析字串
+        }
+        if (isNaN(date.getTime())) return '無效日期'; // 如果是無效日期，顯示明確提示
+
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function render(arr) {
+      const list = document.getElementById('list');
+      if (!arr || !arr.length) {
+        list.innerHTML = '<p class="loading">尚無中獎紀錄</p>';
+        return;
+      }
+      
+      const now = new Date(); // 獲取當前時間，用於判斷是否過期
+
+      console.log('渲染數據:', arr); // *** 偵錯日誌：查看渲染函數接收到的數據 ***
+
+      list.innerHTML = arr.map(o => {
+        console.log('處理單條紀錄:', o); // *** 偵錯日誌：查看單條紀錄的內容 ***
+
+        let isExpired = false;
+        let expiryDisplay = '無過期時間'; // 預設值，如果 o.expiryTime 不存在或無效
+        
+        // *** 關鍵修改：使用 o.expiryTime 來判斷和顯示過期時間 ***
+        if (o.expiryTime) {
+            console.log('原始過期時間字串:', o.expiryTime); // *** 偵錯日誌：查看原始過期時間字串 ***
+            const expiryDateObj = new Date(String(o.expiryTime).replace(/-/g, '/')); 
+            console.log('解析後的過期時間物件:', expiryDateObj, '是否有效:', isNaN(expiryDateObj.getTime())); // *** 偵錯日誌：查看解析結果 ***
+
+            if (!isNaN(expiryDateObj.getTime())) {
+                expiryDisplay = formatDateDisplay(expiryDateObj); // 格式化為 YYYY-MM-DD 顯示
+                if (expiryDateObj < now) { // 如果過期時間早於當前時間，則已過期
+                    isExpired = true;
+                }
+            } else {
+                expiryDisplay = '過期日期格式錯誤'; // 如果解析失敗，顯示明確提示
+            }
+        }
+
+        const redeemedText = o.redeemed === '是' ? '已核銷' : '未核銷';
+        let buttonHtml;
+        if (o.redeemed === '是') {
+          buttonHtml = `<button class="redeemBtn done" disabled>已核銷<br>${o.redeemTime}</button>`;
+        } else if (isExpired) {
+          buttonHtml = `<button class="redeemBtn expired" disabled>已過期</button>`;
+        } else {
+          buttonHtml = `<button class="redeemBtn" onclick="redeem(${o.recordId}, this)">核銷</button>`;
+        }
+
+        return `
+          <div class="card" id="c${o.recordId}">
+            <h3>${o.prize}</h3>
+            <div class="info">
+              店家名稱：${o.storeName || 'N/A'}<br> <!-- 如果沒有店家名稱，顯示 N/A -->
+              中獎時間：${o.winTime || 'N/A'}<br>
+              過期時間：<span class="expiry-date">${expiryDisplay}</span><br>
+              核銷狀態：${redeemedText}<br>
+              ${o.redeemed === '是' ? `核銷時間：${o.redeemTime || 'N/A'}<br>` : ''}
+            </div>
+            ${buttonHtml}
+          </div>`;
+      }).join('');
+
+      if (arr.length === 0 && list.innerHTML.includes('<div class="loading">')) {
+          list.innerHTML = '<p class="loading">尚無中獎紀錄</p>';
+      }
+    }
+
+    async function redeem(recordId, btn) {
+      btn.disabled = true; 
+      btn.textContent='處理中…';
+      try {
+        const res = await fetch(API, {
+          method:'POST', 
+          mode:'cors',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ act:'redeem', recordId: recordId }) 
+        });
+        
+        const j = await res.json();
+        console.log("核銷後端返回數據:", j); 
+
+        if (!j.ok) {
+            throw new Error(j.msg || '後端返回錯誤');
+        }
+        
+        const currentLocalTime = new Date();
+        const redeemTime = currentLocalTime.toLocaleString('zh-TW', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false 
+        }).replace(/\//g, '-'); 
+
+        const card = btn.closest('.card'); 
+        const infoDiv = card.querySelector('.info');
+        
+        let currentInfoHTML = infoDiv.innerHTML;
+        currentInfoHTML = currentInfoHTML.replace(/核銷狀態：未核銷/, '核銷狀態：已核銷'); 
+        
+        const redeemTimeLine = `核銷時間：${redeemTime}<br>`;
+        if (!currentInfoHTML.includes('核銷時間：')) {
+             currentInfoHTML = currentInfoHTML.replace(/核銷狀態：已核銷<br>/, `核銷狀態：已核銷<br>${redeemTimeLine}`);
+        } else {
+             currentInfoHTML = currentInfoHTML.replace(/核銷時間：.+?<br>/, redeemTimeLine);
+        }
+        infoDiv.innerHTML = currentInfoHTML;
+
+        btn.className='redeemBtn done'; 
+        btn.innerHTML=`已核銷<br>${redeemTime}`; 
+
+      } catch(e) {
+        console.error("核銷失敗:", e); 
+        alert('核銷失敗：'+e.message);
+        btn.disabled=false; 
+        btn.textContent='核銷'; 
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>"; 
 
 let uid="", uname="";
 const btnPlay=document.getElementById("play"),
