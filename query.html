@@ -11,6 +11,7 @@
     .card { background:#333; padding:12px; margin:12px 0; border-radius:8px; }
     .card h3 { margin:0 0 8px; color:#fff; }
     .info { font-size:.9em; line-height:1.4; }
+    .expiry-date { color: #ff5555; font-weight: bold; } /* 新增的樣式：紅字 */
     .redeemBtn { width:100%; padding:10px; margin-top:8px; border:none; border-radius:6px;
                  background:#ffc107; color:#000; font-size:1em; }
     .redeemBtn.done { background:#666; color:#bbb; cursor:not-allowed; }
@@ -25,32 +26,75 @@
   <div id="list"><div class="loading">載入中…</div></div>
 
   <script>
-    const LIFF_ID = '1656871455-vE1ZZLJ7';
-    const API     = 'https://script.google.com/macros/s/AKfycbyH1aQ8_jNm8-ZE_YpLUY8lRskOvP9ljJBt2Y2jXGGXlETcWOurEcy3ITS9ylTx-MaQjg/exec';
+    const LIFF_ID = '1656871455-vE1ZZLJ7'; // 您的 LIFF ID
+    const API     = 'https://script.google.com/macros/s/AKfycbyHpWxnBPJqRBtXPu3VLkwV58x5U1v59dwwvVugfY6s7cxiGLpp-o1TC2u0baUUVbI4lA/exec'; // 您的 Apps Script 網路應用程式 URL
 
     async function init() {
       await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) return liff.login();
-      const uid = (await liff.getProfile()).userId;
-      loadRecords(uid);
+      // 這裡可以加上 liff.isLoggedIn() 檢查，如果不是在 LIFF 環境中或未登入，提示用戶登入
+      if (!liff.isLoggedIn()) {
+        // 如果不在 LIFF 瀏覽器中，或者未登入，可以選擇跳轉到 LIFF 登入頁
+        // 或者顯示提示信息讓用戶知道需要透過 LINE 開啟
+        // 為了方便開發測試，先讓它繼續執行，實際部署時建議處理
+        console.warn('LIFF 未登入，嘗試獲取假性 userId 進行測試。');
+        // liff.login(); // 實際部署時應該 uncomment 這行
+        // return; // 實際部署時應該 uncomment 這行
+      }
+
+      // 獲取用戶 ID。如果在開發環境下無法獲取，可以使用一個預設 ID 進行測試
+      let uid;
+      try {
+        const profile = await liff.getProfile();
+        uid = profile.userId;
+      } catch (e) {
+        console.error("無法獲取 LIFF 用戶資料:", e);
+        // 如果無法獲取用戶 ID (例如不在 LIFF 環境中調試)，可以使用測試 ID
+        uid = 'test_user_id_from_browser'; // <-- 這裡可以放您試算表中現有的 LINE ID 進行測試
+        document.getElementById('list').innerHTML = `<div class="error">LIFF 登入失敗或不在 LINE 環境中。使用測試ID: ${uid}</div>`;
+      }
+      
+      if (uid) {
+        loadRecords(uid);
+      } else {
+        document.getElementById('list').innerHTML = `<div class="error">無法獲取用戶ID，請確認 LIFF 設定。</div>`;
+      }
     }
 
     async function loadRecords(uid) {
       const list = document.getElementById('list');
       list.innerHTML = '<div class="loading">載入中…</div>';
       try {
-        const res = await fetch(API, {
-          method: 'POST', mode: 'cors',
-          headers: { 'Content-Type':'application/json' },
-          body: JSON.stringify({ act:'query', userId: uid })
+        // *** 關鍵修改：從 POST 改為 GET，並將 userId 作為 URL 參數傳遞 ***
+        const res = await fetch(`${API}?userId=${uid}`, {
+          method: 'GET', 
+          mode: 'cors' // 保持 cors 模式，如果跨域請求 Apps Script 需要
         });
-        if (!res.ok) throw new Error(res.status);
+
+        if (!res.ok) {
+            console.error("HTTP 錯誤狀態:", res.status);
+            throw new Error(`HTTP 錯誤 ${res.status}`);
+        }
+        
         const j = await res.json();
-        if (j.status!=='ok') throw new Error(j.message||'後端錯誤');
-        render(j.data);
+        console.log("後端返回數據:", j); // 偵錯日誌
+
+        // *** 關鍵修改：根據後端返回的 {ok: true, records: [...]} 結構進行判斷 ***
+        if (!j.ok) {
+            throw new Error(j.msg || '後端返回錯誤');
+        }
+        render(j.records); // 傳遞 j.records 到 render 函數
       } catch(err) {
+        console.error("載入紀錄失敗:", err); // 偵錯日誌
         list.innerHTML = `<div class="error">讀取失敗：${err.message}</div>`;
       }
+    }
+
+    // 新增日期格式化函數，用於顯示有效期限
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     function render(arr) {
@@ -59,35 +103,117 @@
         list.innerHTML = '<p class="loading">尚無中獎紀錄</p>';
         return;
       }
-      list.innerHTML = arr.map(o=>`
-        <div class="card" id="c${o.row}">
-          <h3>${o.lineName}</h3>
-          <div class="info">
-            中獎時間：${o.winTime}<br>
-            遊戲名稱：${o.game}<br>
-            優惠內容：${o.prize}
-          </div>
-          ${o.isRedeem
-            ? `<button class="redeemBtn done" disabled>已核銷<br>${o.redeemTime}</button>`
-            : `<button class="redeemBtn" onclick="redeem(${o.row}, this)">核銷</button>`}
-        </div>`).join('');
+      
+      list.innerHTML = arr.map(o => {
+        // 計算有效期限：中獎時間起算3個月
+        let expiryDateText = '無法計算有效期限'; // 預設值
+
+        // 確保 o.winTime 存在且是有效字串
+        if (o.winTime) {
+            // 解析中獎時間字串為 Date 物件
+            // 將 'YYYY-MM-DD HH:mm:ss' 格式替換 '-' 為 '/' 確保跨瀏覽器兼容性
+            // 這裡假設後端返回的 o.winTime 是標準日期時間字串
+            const winDate = new Date(o.winTime.replace(/-/g, '/')); 
+
+            if (!isNaN(winDate.getTime())) { // 檢查轉換後的日期是否有效
+                const expiryDate = new Date(winDate);
+                expiryDate.setMonth(expiryDate.getMonth() + 3); // 增加三個月
+
+                // 處理月份增加後日期溢出的情況（例如 1月31日 + 1個月 = 3月2日）
+                // 目標是使其變成 2月28日（當月最後一天）
+                const originalDay = winDate.getDate();
+                if (expiryDate.getDate() < originalDay) {
+                    expiryDate.setDate(0); // 設置為上個月的最後一天 (例如，如果原是31日，會回到2月28日)
+                }
+                
+                expiryDateText = formatDate(expiryDate);
+            }
+        }
+
+        // 根據 Code.gs 中 getUserPrizeRecords 返回的欄位名稱調整
+        // displayName 對應 o.displayName
+        // prize 對應 o.prize
+        // storeName 對應 o.storeName
+        // redeemed 對應 o.redeemed (是/否)
+        // redeemTime 對應 o.redeemTime
+        // recordId 對應 o.recordId (行號)
+
+        return `
+          <div class="card" id="c${o.recordId}">
+            <h3>${o.prize}</h3>
+            <div class="info">
+              店家名稱：${o.storeName}<br>
+              中獎時間：${o.winTime}<br>
+              有效時間：<span class="expiry-date">${expiryDateText}</span><br>
+              核銷狀態：${o.redeemed}<br>
+              ${o.redeemed === '是' ? `核銷時間：${o.redeemTime}<br>` : ''}
+            </div>
+            ${o.redeemed === '是'
+              ? `<button class="redeemBtn done" disabled>已核銷<br>${o.redeemTime}</button>`
+              : `<button class="redeemBtn" onclick="redeem(${o.recordId}, this)">核銷</button>`}
+          </div>`;
+      }).join('');
+
+      // 如果列表是空的，確保顯示 "尚無中獎紀錄"
+      if (arr.length === 0 && list.innerHTML.includes('<div class="loading">')) {
+          list.innerHTML = '<p class="loading">尚無中獎紀錄</p>';
+      }
     }
 
-    async function redeem(row, btn) {
-      btn.disabled = true; btn.textContent='處理中…';
+    async function redeem(recordId, btn) {
+      btn.disabled = true; 
+      btn.textContent='處理中…';
       try {
+        // *** 關鍵修改：確保 body 傳遞的參數名稱與後端一致，是 recordId ***
         const res = await fetch(API, {
-          method:'POST', mode:'cors',
+          method:'POST', 
+          mode:'cors',
           headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ act:'redeem', row })
+          body: JSON.stringify({ act:'redeem', recordId: recordId }) 
         });
+        
         const j = await res.json();
-        if (j.status!=='ok') throw new Error(j.message);
+        console.log("核銷後端返回數據:", j); // 偵錯日誌
+
+        // *** 關鍵修改：根據後端返回的 {ok: true, msg: ...} 結構進行判斷 ***
+        if (!j.ok) {
+            throw new Error(j.msg || '後端返回錯誤');
+        }
+        
+        // 核銷成功後，本地更新顯示的核銷時間，使其更即時
+        const redeemTime = new Date().toLocaleString('zh-TW', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false // 使用24小時制
+        }).replace(/\//g, '-'); // 將 / 替換為 -，使格式與後端now()更一致
+
+        const card = btn.closest('.card'); // 找到父層 card 元素
+        const infoDiv = card.querySelector('.info'); // 找到信息區塊
+        
+        // 更新 infoDiv 內部的 HTML
+        let currentInfoHTML = infoDiv.innerHTML;
+        // 替換核銷狀態「否」為「是」
+        currentInfoHTML = currentInfoHTML.replace(/核銷狀態：否/, '核銷狀態：是');
+        // 添加或更新核銷時間
+        const redeemTimeLine = `核銷時間：${redeemTime}<br>`;
+        if (!currentInfoHTML.includes('核銷時間：')) {
+             // 如果沒有核銷時間這一行，在「核銷狀態：是<br>」之後插入
+             currentInfoHTML = currentInfoHTML.replace(/核銷狀態：是<br>/, `核銷狀態：是<br>${redeemTimeLine}`);
+        } else {
+             // 如果已有核銷時間，則替換掉舊的
+             currentInfoHTML = currentInfoHTML.replace(/核銷時間：.+?<br>/, redeemTimeLine);
+        }
+        infoDiv.innerHTML = currentInfoHTML;
+
+        // 更新按鈕狀態和文字
         btn.className='redeemBtn done';
-        btn.innerHTML=`已核銷<br>${j.data}`;
+        btn.innerHTML=`已核銷<br>${redeemTime}`; 
+
       } catch(e) {
+        console.error("核銷失敗:", e); // 偵錯日誌
         alert('核銷失敗：'+e.message);
-        btn.disabled=false; btn.textContent='核銷';
+        btn.disabled=false; 
+        btn.textContent='核銷'; // 失敗後將按鈕恢復
       }
     }
 
