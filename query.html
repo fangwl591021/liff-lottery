@@ -28,7 +28,7 @@
 
   <script>
     const LIFF_ID = '1656871455-vE1ZZLJ7'; // 您的 LIFF ID
-    const API     = 'https://script.google.com/macros/s/AKfycbxsgs78jxuGtVnoBMx0ZXeaXwtsXx0yQgT8IuZOt50UNZlnIwVgsGargY-7BCo9CodR9A/exec'; // <-- 請更新為您 Apps Script 的 API 網址
+    const API     = 'https://script.google.com/macros/s/AKfycbwQaSFQZCiuCyhTaXJLMereQqAIrNtkJAWuh4foF0NevKfW2PD8fvWInu7_SnDBPL17_Q/exec'; // <-- 請更新為您 Apps Script 的 API 網址
 
     async function init() {
       await liff.init({ liffId: LIFF_ID });
@@ -60,7 +60,8 @@
       const list = document.getElementById('list');
       list.innerHTML = '<div class="loading">載入中…</div>';
       try {
-        const res = await fetch(`${API}?act=query&userId=${uid}`, { // 新增 act=query 參數
+        // *** 關鍵修改：發送查詢請求時，帶上 act=query 參數 ***
+        const res = await fetch(`${API}?act=query&userId=${uid}`, { 
           method: 'GET', 
           mode: 'cors' 
         });
