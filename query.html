@@ -28,7 +28,7 @@
 
   <script>
     const LIFF_ID = '1656871455-vE1ZZLJ7'; // 您的 LIFF ID
-    const API = 'https://script.google.com/macros/s/AKfycbzHT9w_ipMG2pD100-tT9X4tFc9W1jHYhEq9R_WvBXNOzXl_siP-Wwo3xeAecf9aX5Qrw/exec'; // 您的 Apps Script 網路應用程式 URL
+    const API     = 'https://script.google.com/macros/s/AKfycbxhQLO9_34IqJuMyA35mhyJlMoittqFDPYzXHv7hSHG-PPrICg_iro0sn9TmSKj_VLi-g/exec'; // 您的 Apps Script 網路應用程式 URL
 
     async function init() {
       await liff.init({ liffId: LIFF_ID });
@@ -39,7 +39,6 @@
           const profile = await liff.getProfile();
           uid = profile.userId;
         } else {
-          // 如果不在 LIFF 環境中，或者未登入，用於開發測試
           console.warn('LIFF 未登入，嘗試獲取假性 userId 進行測試。');
           uid = 'Udb7c5578b402bf6f1e0f7065fc57c17b'; // <-- 這裡可以放您試算表中現有的 LINE ID 進行測試
           document.getElementById('list').innerHTML = `<div class="error">LIFF 登入失敗或不在 LINE 環境中。使用測試ID: ${uid}</div>`;
@@ -111,16 +110,17 @@
         let isExpired = false;
         let expiryDisplay = '未定義'; // 顯示在頁面上的過期時間
         
-        // 檢查 o.expiryTime 是否存在且有效
+        // *** 關鍵修改：使用 o.expiryTime 來判斷和顯示過期時間 ***
         if (o.expiryTime) {
-            const expiryDateObj = new Date(String(o.expiryTime).replace(/-/g, '/')); // 確保解析
+            // 確保 o.expiryTime 是字串，並且可以被 new Date() 解析
+            const expiryDateObj = new Date(String(o.expiryTime).replace(/-/g, '/')); 
             if (!isNaN(expiryDateObj.getTime())) {
                 expiryDisplay = formatDateDisplay(expiryDateObj); // 格式化為 YYYY-MM-DD 顯示
                 if (expiryDateObj < now) { // 如果過期時間早於當前時間，則已過期
                     isExpired = true;
                 }
             } else {
-                expiryDisplay = '日期格式錯誤';
+                expiryDisplay = '日期格式錯誤'; // 如果解析失敗
             }
         }
 
@@ -171,19 +171,18 @@
             throw new Error(j.msg || '後端返回錯誤');
         }
         
-        // 核銷成功後，本地更新顯示的核銷時間和狀態
         const currentLocalTime = new Date();
         const redeemTime = currentLocalTime.toLocaleString('zh-TW', {
             year: 'numeric', month: '2-digit', day: '2-digit',
             hour: '2-digit', minute: '2-digit', second: '2-digit',
-            hour12: false // 使用24小時制
+            hour12: false 
         }).replace(/\//g, '-'); 
 
         const card = btn.closest('.card'); 
         const infoDiv = card.querySelector('.info');
         
         let currentInfoHTML = infoDiv.innerHTML;
-        currentInfoHTML = currentInfoHTML.replace(/核銷狀態：未核銷/, '核銷狀態：已核銷'); // 更新核銷狀態文字
+        currentInfoHTML = currentInfoHTML.replace(/核銷狀態：未核銷/, '核銷狀態：已核銷'); 
         
         const redeemTimeLine = `核銷時間：${redeemTime}<br>`;
         if (!currentInfoHTML.includes('核銷時間：')) {
@@ -194,7 +193,7 @@
         infoDiv.innerHTML = currentInfoHTML;
 
         btn.className='redeemBtn done';
-        btn.innerHTML=`已核銷<br>${redeemTime}`; 
+        btn.innerHTML=`已核銷<br>${redeeemTime}`; 
 
       } catch(e) {
         console.error("核銷失敗:", e); 
