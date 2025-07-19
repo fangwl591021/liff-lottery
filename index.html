@@ -72,6 +72,11 @@ btnPlay.onclick=()=>{
   winSound.load(); loseSound.load();
   btnPlay.style.display="none";
   msg.textContent="";
+  // 移除之前可能存在的過期時間顯示
+  const existingExpirySpan = document.querySelector('.expiry-text');
+  if (existingExpirySpan) {
+      existingExpirySpan.remove();
+  }
   mv.style.display="block";
   mv.currentTime=0;
   mv.play();
