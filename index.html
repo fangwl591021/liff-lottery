@@ -15,7 +15,19 @@
     video { width:100%; max-width:420px; border-radius:12px; display:none; margin-top:20px }
     input { width:80%; max-width:320px; padding:10px; margin:6px 0; border-radius:6px; border:none; font-size:1em }
     #msg { margin:18px 0 8px; font-size:1.4em; font-weight:bold }
-    .expiry-text { color: #ff5555; font-weight: bold; font-size: 1.1em; margin-top: 10px; display: block; } /* 新增過期時間樣式 */
+    /* 新增樣式：用於顯示過期時間的紅字 */
+    .expiry-info { 
+      color: #ff5555; 
+      font-weight: bold; 
+      font-size: 1.1em; 
+      margin-top: 5px; /* 與上方訊息的間距 */
+      display: block; /* 確保獨佔一行 */
+    }
+    .win-details {
+        margin-top: 10px; /* 與主要訊息的間距 */
+        font-size: 1em;
+        line-height: 1.5;
+    }
   </style>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
@@ -26,6 +38,9 @@
     <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4">
   </video>
   <div id="msg"></div>
+  <!-- 新增一個用於顯示中獎詳情和過期時間的容器 -->
+  <div id="winDetails" class="win-details" style="display:none;"></div>
+
   <div id="form" style="display:none">
     <input id="username" placeholder="姓名" />
     <input id="phone" placeholder="手機" />
@@ -40,7 +55,7 @@
 const LIFF_ID = "1656871455-vE1ZZLJ7"; 
 
 // **重要：請務必將此處的 API 網址替換為您最新部署 Apps Script 時獲取到的「網路應用程式網址」**
-const API     = "https://script.google.com/macros/s/AKfycbwdpcjKZRnNoo5T1ibf8Dqu4K79Agm5cAAPcUiUiF7eaLrCAvcXN3F44AJ7oXPEZ0Geww/exec"; 
+const API     = "https://script.google.com/macros/s/AKfycbyBSr1hibsTThmAJQhHVSw9Y4IKMpyEcPR1d5RLo1ndHgnEG31AbFw9Nz8ZatWmvit6/exec"; 
 
 const EXPIRY_DAYS = 90; // 與後端保持一致的過期天數
 
@@ -48,6 +63,7 @@ let uid="", uname="";
 const btnPlay=document.getElementById("play"),
       mv=document.getElementById("mv"),
       msg=document.getElementById("msg"),
+      winDetailsDiv = document.getElementById("winDetails"), // 新增獲取 winDetails 元素
       form=document.getElementById("form"),
       inName=document.getElementById("username"),
       inPhone=document.getElementById("phone"),
@@ -72,11 +88,9 @@ btnPlay.onclick=()=>{
   winSound.load(); loseSound.load();
   btnPlay.style.display="none";
   msg.textContent="";
-  // 移除之前可能存在的過期時間顯示
-  const existingExpirySpan = document.querySelector('.expiry-text');
-  if (existingExpirySpan) {
-      existingExpirySpan.remove();
-  }
+  winDetailsDiv.style.display = 'none'; // 隱藏詳情
+  winDetailsDiv.innerHTML = ''; // 清空詳情內容
+
   mv.style.display="block";
   mv.currentTime=0;
   mv.play();
@@ -90,6 +104,18 @@ function formatDateDisplay(date) {
     const day = date.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+
+// 新增日期時間格式化函數，用於顯示中獎時間
+function formatDateTimeDisplay(date) {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 
 mv.onpause=async ()=>{
   mv.style.display="none";
@@ -113,18 +139,20 @@ mv.onpause=async ()=>{
     inName.value=uname; // 預填 LINE 名稱
     btnSend.style.display="block"; // 顯示送出按鈕
 
-    // *** 新增：計算並顯示過期時間 ***
+    // *** 新增：計算並顯示中獎時間和過期時間 ***
     const currentWinTime = new Date(); // 中獎當下的時間
     const expiryDateTime = new Date(currentWinTime);
     expiryDateTime.setDate(currentWinTime.getDate() + EXPIRY_DAYS); // 加上90天
 
-    const expiryTimeText = formatDateDisplay(expiryDateTime); // 格式化為 YYYY-MM-DD
+    const winTimeText = formatDateTimeDisplay(currentWinTime); // 格式化中獎時間
+    const expiryTimeText = formatDateDisplay(expiryDateTime); // 格式化過期時間
     
-    // 在 msg 元素下方或旁邊顯示過期時間
-    const expirySpan = document.createElement('span');
-    expirySpan.className = 'expiry-text';
-    expirySpan.textContent = `請於 ${expiryTimeText} 前核銷`;
-    msg.parentNode.insertBefore(expirySpan, form); // 插入到 msg 後面，form 前面
+    // 顯示中獎詳情和過期時間
+    winDetailsDiv.innerHTML = `
+        <p>3. 中獎時間：${winTimeText}</p>
+        <p class="expiry-info">4. 有效期限：${expiryTimeText}</p>
+    `;
+    winDetailsDiv.style.display = 'block'; // 顯示詳情容器
 
   } else {
     try{ await loseSound.play(); }catch(_){}
@@ -150,7 +178,6 @@ btnSend.onclick=()=>{
   btnSend.style.background="#555"; // 按鈕變灰
 
   // 保持 mode:"no-cors" 如您所要求
-  // **重點：這裡已移除 prize:"預設獎項"**
   fetch(API,{
     method:"POST", 
     mode:"no-cors", // 保持 no-cors
@@ -163,14 +190,9 @@ btnSend.onclick=()=>{
       phone:inPhone.value.trim()
     })
   }).then(()=>{
-    // 注意：由於 mode:"no-cors"，此處無法從後端讀取 JSON 響應內容
-    // 因此前端無法顯示後端選定的具體獎品名稱。
     msg.textContent="✅ 資料已送出！感謝您的填寫！";
-    // 移除過期時間的顯示，因為資料已送出
-    const expirySpan = document.querySelector('.expiry-text');
-    if (expirySpan) {
-        expirySpan.remove();
-    }
+    winDetailsDiv.style.display = 'none'; // 隱藏詳情
+    winDetailsDiv.innerHTML = ''; // 清空詳情內容
 
     btnSend.disabled=false;
     btnSend.style.background="#fff";
